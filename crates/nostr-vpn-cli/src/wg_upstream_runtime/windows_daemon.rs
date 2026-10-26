@@ -29,8 +29,8 @@ pub(crate) fn windows_wireguard_ipv6_default(config: &WireGuardExitConfig) -> Re
     }
     if !nostr_vpn_core::config::route_is_ipv6(&config.address_v6) {
         return Err(anyhow!(
-            "WireGuard exit with IPv6 AllowedIPs needs an IPv6 Address; re-import the \
-             provider config so its dual-stack Address line is kept"
+            "WireGuard exit with IPv6 AllowedIPs needs an IPv6 Address; import a \
+             provider config generated with IPv6 enabled so its Address line includes one"
         ));
     }
     Ok(true)
