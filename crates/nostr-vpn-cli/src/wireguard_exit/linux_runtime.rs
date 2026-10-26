@@ -588,7 +588,10 @@ fn merge_interface_restore(
     if !restore
         .addresses
         .iter()
-        .any(|candidate| candidate.configured == address.configured)
+        .any(|candidate| {
+            candidate.configured == address.configured
+                && candidate.configured_v6 == address.configured_v6
+        })
     {
         restore.addresses.push(address.clone());
     }
@@ -604,6 +607,8 @@ fn capture_apply_snapshot(
     previous_runtime: Option<&LinuxWireGuardExitRuntime>,
 ) -> Result<ApplySnapshot> {
     let configured = config.address.trim();
+    let configured_v6 = super::linux_wireguard_exit_ipv6_default(config)
+        .then(|| config.address_v6.trim().to_string());
     let address_output = command_output_checked(
         runner,
         "ip",
@@ -612,6 +617,9 @@ fn capture_apply_snapshot(
     let address = LinuxAddressRestore {
         configured: configured.to_string(),
         previous: linux_interface_address_for_config(&address_output, configured),
+        previous_v6: configured_v6.as_deref()
+            .and_then(|configured_v6| linux_interface_address_for_config(&address_output, configured_v6)),
+        configured_v6,
     };
     let wireguard_config = command_output_checked(runner, "wg", &strings(&["showconf", iface]))?;
     let link_output = command_output_checked(
@@ -682,6 +690,9 @@ fn apply_snapshot_mutations(
 ) -> Result<()> {
     progress.address_started = true;
     replace_linux_address(runner, iface, config.address.trim())?;
+    if let Some(address_v6) = snapshot.address.configured_v6.as_deref() {
+        replace_linux_address(runner, iface, address_v6)?;
+    }
 
     for route in endpoint_specs {
         progress.endpoint_targets_started.push(route.target.clone());

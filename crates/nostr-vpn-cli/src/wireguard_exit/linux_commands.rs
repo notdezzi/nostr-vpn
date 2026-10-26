@@ -10,6 +10,10 @@ use super::{WIREGUARD_EXIT_RULE_PRIORITY, WIREGUARD_EXIT_TABLE};
 pub(super) struct LinuxAddressRestore {
     pub(super) configured: String,
     pub(super) previous: Option<String>,
+    #[serde(default)]
+    pub(super) configured_v6: Option<String>,
+    #[serde(default)]
+    pub(super) previous_v6: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -480,15 +484,30 @@ pub(super) fn restore_linux_address(
     } else {
         Ok(())
     };
-    match (delete, replace) {
-        (Ok(()), Ok(())) => Ok(()),
-        (Err(delete), Ok(())) => Err(delete)
+    let delete_v6 = match address.configured_v6.as_deref() {
+        Some(configured_v6) => run_checked_allow_absent(
+            runner,
+            "ip",
+            &strings(&["address", "del", configured_v6, "dev", iface]),
+        ),
+        None => Ok(()),
+    };
+    let replace_v6 = match address.previous_v6.as_deref() {
+        Some(previous_v6) => run_checked(
+            runner,
+            "ip",
+            &strings(&["address", "replace", previous_v6, "dev", iface]),
+        ),
+        None => Ok(()),
+    };
+    match (delete, replace, delete_v6, replace_v6) {
+        (Ok(()), Ok(()), Ok(()), Ok(())) => Ok(()),
+        (Err(delete), _, _, _)
+        | (_, _, Err(delete), _) => Err(delete)
             .with_context(|| format!("failed to remove managed WireGuard address on {iface}")),
-        (Ok(()), Err(replace)) => Err(replace)
+        (_, Err(replace), _, _)
+        | (_, _, _, Err(replace)) => Err(replace)
             .with_context(|| format!("failed to restore pre-WireGuard address on {iface}")),
-        (Err(delete), Err(replace)) => Err(anyhow!(
-            "failed to restore address on {iface}: delete failed ({delete:#}); replace failed ({replace:#})"
-        )),
     }
 }
 
