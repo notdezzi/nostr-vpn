@@ -76,7 +76,9 @@ pub(crate) fn daemon_pid_record_counts_as_running(pid: u32, config_path: &Path) 
     let script = format!(
         "Get-CimInstance Win32_Process -Filter \"ProcessId = {pid}\" | Select-Object ProcessId,CommandLine | ConvertTo-Json -Compress"
     );
-    let output = ProcessCommand::new("powershell.exe")
+    let mut command = ProcessCommand::new("powershell.exe");
+    nostr_vpn_core::process_ext::CommandWindowExt::hide_console_window(&mut command);
+    let output = command
         .args([
             "-NoProfile",
             "-NonInteractive",
@@ -180,7 +182,9 @@ pub(crate) fn linux_proc_stat_counts_as_running(stat: &str) -> bool {
 
 #[cfg(windows)]
 pub(crate) fn find_daemon_pids_by_config(config_path: &Path) -> Vec<u32> {
-    let output = ProcessCommand::new("powershell.exe")
+    let mut command = ProcessCommand::new("powershell.exe");
+    nostr_vpn_core::process_ext::CommandWindowExt::hide_console_window(&mut command);
+    let output = command
         .args([
             "-NoProfile",
             "-NonInteractive",
@@ -311,7 +315,9 @@ pub(crate) fn tasklist_pids_from_output(tasklist_output: &str) -> Vec<u32> {
 
 #[cfg(windows)]
 pub(crate) fn windows_nvpn_pids() -> Vec<u32> {
-    let output = ProcessCommand::new("tasklist")
+    let mut command = ProcessCommand::new("tasklist");
+    nostr_vpn_core::process_ext::CommandWindowExt::hide_console_window(&mut command);
+    let output = command
         .args(["/FI", "IMAGENAME eq nvpn.exe", "/FO", "CSV", "/NH"])
         .output();
     let Ok(output) = output else {

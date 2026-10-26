@@ -8,7 +8,7 @@ pub(crate) fn run_windows_command_with_timeout(
     operation: &str,
     timeout: std::time::Duration,
 ) -> Result<std::process::Output> {
-    command
+    nostr_vpn_core::process_ext::CommandWindowExt::hide_console_window(command)
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped());
