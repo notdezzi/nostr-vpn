@@ -48,11 +48,7 @@ pub(crate) fn validate_linux_wireguard_exit_config(config: &WireGuardExitConfig)
 
 pub(crate) fn linux_wireguard_exit_ipv6_default(config: &WireGuardExitConfig) -> bool {
     config.allowed_ips.iter().any(|route| route == "::/0")
-        && config
-            .address
-            .split('/')
-            .next()
-            .is_some_and(|ip| ip.contains(':'))
+        && nostr_vpn_core::config::route_is_ipv6(&config.address_v6)
 }
 
 fn validated_linux_wireguard_underlay_default_route(
@@ -163,5 +159,20 @@ mod tests {
             .as_deref(),
             Some("default via 192.0.2.1 dev enp1s0")
         );
+    }
+
+    #[test]
+    fn ipv6_default_requires_dual_stack_address_line() {
+        let mut config = WireGuardExitConfig::default();
+        config.allowed_ips = vec!["0.0.0.0/0".into(), "::/0".into()];
+        config.address = "10.74.236.111/32".into();
+        assert!(
+            !linux_wireguard_exit_ipv6_default(&config),
+            "IPv4-only provider config must not arm the IPv6 exit"
+        );
+        config.address_v6 = "fc00:bbbb:bbbb:bb01::b:ec6e/128".into();
+        assert!(linux_wireguard_exit_ipv6_default(&config));
+        config.allowed_ips.retain(|route| route != "::/0");
+        assert!(!linux_wireguard_exit_ipv6_default(&config));
     }
 }
