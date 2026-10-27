@@ -16,13 +16,24 @@ navigation changed. Build verified with `scripts/windows-build.ps1
 - Rebuild from source: `powershell -File scripts/windows-build.ps1 -Configuration Release -Run`
   (adds `-Publish` for the publish output, `-Installer` for the Inno Setup installer).
 
+## Window behavior (Mullvad-style)
+
+The window is **fixed-size (760x640), non-resizable, and non-maximizable**
+(`ResizeMode="NoResize"`, no min/max buttons — just close, like Mullvad's custom
+chrome) and always opens **centered on the screen**; closing to tray and
+reopening keeps the same position. Mullvad itself uses a smaller window
+(~350px wide); we kept more width because the Devices detail and Public Exits
+pages are two-column/dense. Going fully Mullvad-sized would require responsive
+one-column layouts for those pages — noted as a follow-up.
+
 ## New information architecture
 
 **Shell (Mullvad-style):** the left sidebar is gone. One header bar:
-"Nostr VPN" on the left; on the right the **Wallet** button (shows the balance),
-the **profile** button (opens a panel under the icon), and the **Settings**
-gear. Below the header: the global update banner, the notice line, then the
-page content, centered (~720px column) over the navy theme.
+"Nostr VPN" on the left; on the right, in order: **Account** (user icon),
+**Wallet** (shows the balance), **Settings**. Below the header: the global
+update banner, the notice line, then the page content, centered over the
+theme (dark theme is charcoal `#121212` with soft-gray `#888888` accent; light
+theme unchanged in spirit).
 
 **Home (new default page)** — replaces both the old header toggle area and the
 map/location idea:
@@ -42,11 +53,12 @@ map/location idea:
    With no network configured, Home shows a single "Set up your network" card
    that opens the create/join flow.
 
-**Profile panel (under the profile icon):** device name, MagicDNS name, VPN IP,
-**Device ID with Copy**, a **Wallet summary (balance + Open wallet)**, and the
-app/daemon version. This is the "account screen" equivalent.
+**Account page (the user icon):** a real page switch (like Settings/Wallet),
+not a popout — device name, MagicDNS name, VPN IP, **Device ID with Copy**
+(with a plain hint: "Share this with a network admin so they can add you"), a
+**Wallet card (balance + Open wallet)**, and the app/daemon version.
 
-**Back navigation:** every sub-page (Devices, Add Network, Add Device,
+**Back navigation:** every sub-page (Account, Devices, Add Network, Add Device,
 Internet, Public Exits, Wallet, Sell Access, Settings) has a **‹ Back** button
 to Home.
 
@@ -99,10 +111,16 @@ internet", "Through a device in your network", "Paid internet (automatic)", …)
   and the Wallet keep their content, just restyled and reachable via
   Back buttons and the header wallet button.
 
-ViewModel additions (small, additive): `AppPage.Home` (new default page),
+ViewModel additions (small, additive): `AppPage.Home` and `AppPage.Account`
+(new default page + account page), `ShowAccountCommand`,
 `IsProMode` (persisted in `HKCU\Software\Nostr VPN\ProMode`),
 `ConnectButtonText`, `VpnHeadlineText` / `VpnHeadlineBrush`,
 `InternetSourceSummary`. Enrollment flows now land on Home instead of Devices.
+
+Theme: `Themes/Dark.xaml` is a charcoal palette — background `#121212`, cards
+`#1E1E1E`, primary text `#E0E0E0`, secondary text `#B0B0B0`, borders
+`#444444`, accent `#888888` (semantic green/amber/red kept for status dots and
+warnings). `Themes/Light.xaml` uses the same green accent on white.
 
 ## Known gaps / follow-ups
 

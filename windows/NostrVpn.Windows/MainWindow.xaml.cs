@@ -98,11 +98,6 @@ public partial class MainWindow : Window
         }
     }
 
-    private void CloseProfilePopup_Click(object sender, RoutedEventArgs e)
-    {
-        ProfileButton.IsChecked = false;
-    }
-
     private StackPanel NetworkMenuHeader(NativeNetworkState network)
     {
         var row = new StackPanel { Orientation = Orientation.Horizontal };

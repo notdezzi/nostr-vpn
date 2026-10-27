@@ -3,10 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:NostrVpn.Windows.Controls"
         Title="Nostr VPN"
-        Width="960"
-        Height="700"
-        MinWidth="780"
-        MinHeight="620"
+        Width="760"
+        Height="640"
+        ResizeMode="NoResize"
         WindowStartupLocation="CenterScreen"
         Icon="Assets/nostr-vpn.ico"
         Foreground="{DynamicResource TextPrimary}"
@@ -61,66 +60,17 @@
           <TextBlock Text="Nostr VPN" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center" />
         </StackPanel>
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+          <Button Style="{StaticResource HeaderIconButton}" Command="{Binding ShowAccountCommand}" ToolTip="Account">
+            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE77B;" FontSize="15" />
+          </Button>
           <Button Style="{StaticResource HeaderIconButton}" Command="{Binding ShowWalletCommand}"
                   Visibility="{Binding PaidRouteMarketVisible, Converter={StaticResource BoolToVisibility}}"
-                  ToolTip="Wallet" Padding="10,0">
+                  ToolTip="Wallet" Padding="10,0" Margin="4,0,0,0">
             <StackPanel Orientation="Horizontal">
               <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8C7;" FontSize="15" VerticalAlignment="Center" />
               <TextBlock Text="{Binding WalletNavigationText}" FontSize="12" Margin="7,0,0,0" VerticalAlignment="Center" />
             </StackPanel>
           </Button>
-          <ToggleButton x:Name="ProfileButton" Style="{StaticResource HeaderToggleButton}" ToolTip="This device">
-            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE77B;" FontSize="15" />
-          </ToggleButton>
-          <Popup PlacementTarget="{Binding ElementName=ProfileButton}"
-                 Placement="Bottom"
-                 StaysOpen="False"
-                 AllowsTransparency="True"
-                 PopupAnimation="Fade"
-                 IsOpen="{Binding IsChecked, ElementName=ProfileButton}">
-            <Border Background="{DynamicResource PanelBg}" BorderBrush="{DynamicResource Line}" BorderThickness="1"
-                    CornerRadius="12" Padding="18" Margin="0,6,12,12" Width="360">
-              <Border.Effect>
-                <DropShadowEffect BlurRadius="16" ShadowDepth="2" Opacity="0.35" />
-              </Border.Effect>
-              <StackPanel>
-                <TextBlock Text="This device" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10" />
-                <Grid Margin="0,0,0,4">
-                  <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="110" />
-                    <ColumnDefinition Width="*" />
-                  </Grid.ColumnDefinitions>
-                  <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                  </Grid.RowDefinitions>
-                  <TextBlock Text="Name" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Top" Margin="0,0,8,8" />
-                  <TextBlock Grid.Column="1" Text="{Binding State.NodeName}" TextTrimming="CharacterEllipsis" Margin="0,0,0,8" />
-                  <TextBlock Grid.Row="1" Text="MagicDNS" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Top" Margin="0,0,8,8" />
-                  <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding State.SelfMagicDnsName}" TextWrapping="Wrap" Margin="0,0,0,8" />
-                  <TextBlock Grid.Row="2" Text="VPN IP" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Top" Margin="0,0,8,0" />
-                  <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding State.TunnelIp}" TextTrimming="CharacterEllipsis" />
-                </Grid>
-                <TextBlock Text="Device ID" Foreground="{DynamicResource TextSecondary}" Margin="0,8,0,4" />
-                <DockPanel LastChildFill="True">
-                  <Button DockPanel.Dock="Right" Content="Copy" Tag="{Binding State.OwnNpub}" Click="CopyPeer_Click" Margin="8,0,0,0" VerticalAlignment="Top" />
-                  <TextBlock Text="{Binding State.OwnNpub}" TextWrapping="Wrap" />
-                </DockPanel>
-                <Border BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Margin="0,14,0,0" Padding="0,12,0,0"
-                        Visibility="{Binding PaidRouteMarketVisible, Converter={StaticResource BoolToVisibility}}">
-                  <StackPanel>
-                    <TextBlock Text="Wallet" Foreground="{DynamicResource TextSecondary}" Margin="0,0,0,4" />
-                    <TextBlock Text="{Binding PaidRouteWalletBalanceText}" FontSize="22" FontWeight="Bold"
-                               Visibility="{Binding PaidRouteWalletBalanceText, Converter={StaticResource NonEmptyStringToVisibility}}" />
-                    <Button Content="Open wallet" Command="{Binding ShowWalletCommand}" Click="CloseProfilePopup_Click" HorizontalAlignment="Left" Margin="0,8,0,0" />
-                  </StackPanel>
-                </Border>
-                <TextBlock Text="{Binding SystemVersionLabel}" Style="{StaticResource HelperText}" Margin="0,12,0,0"
-                           Visibility="{Binding SystemVersionLabel, Converter={StaticResource NonEmptyStringToVisibility}}" />
-              </StackPanel>
-            </Border>
-          </Popup>
           <Button Style="{StaticResource HeaderIconButton}" Command="{Binding ShowSettingsCommand}" ToolTip="Settings" Margin="4,0,0,0">
             <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE713;" FontSize="15" />
           </Button>
@@ -268,6 +218,58 @@
               <TextBlock Text="{Binding VpnHeadlineText}" FontSize="16" FontWeight="SemiBold" Foreground="{Binding VpnHeadlineBrush}" HorizontalAlignment="Center" Margin="0,14,0,0" />
               <TextBlock Text="{Binding VpnStatusText}" Style="{StaticResource HelperText}" HorizontalAlignment="Center" TextAlignment="Center" MaxWidth="560" TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
             </StackPanel>
+          </StackPanel>
+
+          <!-- ==================== Account ==================== -->
+          <StackPanel Visibility="{Binding Page, Converter={StaticResource PageVisibility}, ConverterParameter=Account}">
+            <Button Click="Back_Click" HorizontalAlignment="Left" Margin="0,0,0,14"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72B;" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0" /><TextBlock Text="Back" VerticalAlignment="Center" /></StackPanel></Button>
+            <TextBlock Text="Account" FontSize="24" FontWeight="SemiBold" Margin="0,0,0,14" />
+
+            <Border Style="{StaticResource Card}">
+              <StackPanel>
+                <TextBlock Text="This device" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10" />
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="110" />
+                    <ColumnDefinition Width="*" />
+                  </Grid.ColumnDefinitions>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                  </Grid.RowDefinitions>
+                  <TextBlock Text="Name" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Top" Margin="0,0,8,8" />
+                  <TextBlock Grid.Column="1" Text="{Binding State.NodeName}" TextTrimming="CharacterEllipsis" Margin="0,0,0,8" />
+                  <TextBlock Grid.Row="1" Text="MagicDNS" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Top" Margin="0,0,8,8" />
+                  <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding State.SelfMagicDnsName}" TextWrapping="Wrap" Margin="0,0,0,8" />
+                  <TextBlock Grid.Row="2" Text="VPN IP" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Top" Margin="0,0,8,0" />
+                  <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding State.TunnelIp}" TextTrimming="CharacterEllipsis" />
+                </Grid>
+                <Border BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Margin="0,14,0,0" Padding="0,14,0,0">
+                  <StackPanel>
+                    <TextBlock Text="Device ID" FontWeight="SemiBold" Margin="0,0,0,4" />
+                    <TextBlock Text="Share this with a network admin so they can add you." Style="{StaticResource HelperText}" Margin="0,0,0,8" />
+                    <DockPanel LastChildFill="True">
+                      <Button DockPanel.Dock="Right" Content="Copy" Tag="{Binding State.OwnNpub}" Click="CopyPeer_Click" Margin="8,0,0,0" VerticalAlignment="Top" />
+                      <TextBlock Text="{Binding State.OwnNpub}" TextWrapping="Wrap" />
+                    </DockPanel>
+                  </StackPanel>
+                </Border>
+                <TextBlock Text="{Binding SystemVersionLabel}" Style="{StaticResource HelperText}" Margin="0,12,0,0"
+                           Visibility="{Binding SystemVersionLabel, Converter={StaticResource NonEmptyStringToVisibility}}" />
+              </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Visibility="{Binding PaidRouteMarketVisible, Converter={StaticResource BoolToVisibility}}">
+              <StackPanel>
+                <TextBlock Text="Wallet" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,4" />
+                <TextBlock Text="{Binding PaidRouteWalletBalanceText}" FontSize="26" FontWeight="Bold"
+                           Visibility="{Binding PaidRouteWalletBalanceText, Converter={StaticResource NonEmptyStringToVisibility}}" />
+                <TextBlock Text="{Binding PaidRouteWalletSecondaryBalanceText}" Style="{StaticResource HelperText}"
+                           Visibility="{Binding PaidRouteWalletSecondaryBalanceText, Converter={StaticResource NonEmptyStringToVisibility}}" />
+                <Button Content="Open wallet" Command="{Binding ShowWalletCommand}" HorizontalAlignment="Left" Margin="0,10,0,0" />
+              </StackPanel>
+            </Border>
           </StackPanel>
 
           <!-- ==================== Devices ==================== -->

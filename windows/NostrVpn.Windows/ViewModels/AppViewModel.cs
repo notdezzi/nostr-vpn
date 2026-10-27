@@ -19,6 +19,7 @@ namespace NostrVpn.Windows.ViewModels;
 public enum AppPage
 {
     Home,
+    Account,
     Devices,
     AddNetwork,
     AddDevice,
@@ -117,6 +118,7 @@ public sealed partial class AppViewModel : INotifyPropertyChanged, IDisposable
         SyncLaunchOnStartupRegistration();
 
         ShowDevicesCommand = new RelayCommand(_ => Page = AppPage.Devices);
+        ShowAccountCommand = new RelayCommand(_ => Page = AppPage.Account);
         ShowAddNetworkCommand = new RelayCommand(_ =>
         {
             SetNetworkSetupMode("");
@@ -723,6 +725,7 @@ public sealed partial class AppViewModel : INotifyPropertyChanged, IDisposable
     public string DiagnosticsFips => $"{State.FipsConnectedPeerCount}/{State.FipsRosterPeerCount} direct";
     public string DiagnosticsOtherFips => $"{State.NonFipsRosterPeerCount}";
     public ICommand ShowDevicesCommand { get; }
+    public ICommand ShowAccountCommand { get; }
     public ICommand ShowAddNetworkCommand { get; }
     public ICommand ShowAddDeviceCommand { get; }
     public ICommand ShowInternetCommand { get; }
