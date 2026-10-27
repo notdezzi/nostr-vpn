@@ -1,25 +1,25 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-  <SolidColorBrush x:Key="WindowBg" Color="#F6F7F8" />
+  <SolidColorBrush x:Key="WindowBg" Color="#F3F6F8" />
   <SolidColorBrush x:Key="PanelBg" Color="#FFFFFF" />
-  <SolidColorBrush x:Key="SidebarBg" Color="#ECEFF2" />
-  <SolidColorBrush x:Key="TextPrimary" Color="#17202A" />
-  <SolidColorBrush x:Key="TextSecondary" Color="#68717C" />
-  <SolidColorBrush x:Key="Accent" Color="#7C3AED" />
-  <SolidColorBrush x:Key="AccentSoft" Color="#F0E8FF" />
+  <SolidColorBrush x:Key="SidebarBg" Color="#E9EEF2" />
+  <SolidColorBrush x:Key="TextPrimary" Color="#152735" />
+  <SolidColorBrush x:Key="TextSecondary" Color="#647684" />
+  <SolidColorBrush x:Key="Accent" Color="#0E9F6E" />
+  <SolidColorBrush x:Key="AccentSoft" Color="#DCF5EA" />
   <SolidColorBrush x:Key="AccentText" Color="#FFFFFF" />
-  <SolidColorBrush x:Key="Ok" Color="#12A150" />
+  <SolidColorBrush x:Key="Ok" Color="#0E9F6E" />
   <SolidColorBrush x:Key="Warn" Color="#A16207" />
   <SolidColorBrush x:Key="Danger" Color="#DC2626" />
-  <SolidColorBrush x:Key="Line" Color="#DDE3EA" />
-  <SolidColorBrush x:Key="UpdateBannerBg" Color="#F2F4F7" />
+  <SolidColorBrush x:Key="Line" Color="#D8E0E7" />
+  <SolidColorBrush x:Key="UpdateBannerBg" Color="#EDF2F5" />
   <SolidColorBrush x:Key="StatusDotIdle" Color="#9CA3AF" />
-  <SolidColorBrush x:Key="StatusDotOk" Color="#16A34A" />
-  <SolidColorBrush x:Key="ButtonBorder" Color="#CCD5DF" />
+  <SolidColorBrush x:Key="StatusDotOk" Color="#0E9F6E" />
+  <SolidColorBrush x:Key="ButtonBorder" Color="#C6D2DB" />
   <SolidColorBrush x:Key="ButtonBg" Color="#FFFFFF" />
-  <SolidColorBrush x:Key="InputBorder" Color="#C9D2DC" />
+  <SolidColorBrush x:Key="InputBorder" Color="#C0CCD6" />
   <SolidColorBrush x:Key="InputBg" Color="#FFFFFF" />
-  <SolidColorBrush x:Key="SwitchTrackOff" Color="#DDE3EA" />
-  <SolidColorBrush x:Key="SwitchTrackBorder" Color="#C9D2DC" />
+  <SolidColorBrush x:Key="SwitchTrackOff" Color="#D8E0E7" />
+  <SolidColorBrush x:Key="SwitchTrackBorder" Color="#C0CCD6" />
   <SolidColorBrush x:Key="SwitchThumb" Color="#FFFFFF" />
 </ResourceDictionary>

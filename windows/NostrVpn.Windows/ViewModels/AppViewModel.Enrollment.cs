@@ -72,7 +72,7 @@ public sealed partial class AppViewModel
             if (string.IsNullOrWhiteSpace(State.Error))
             {
                 JoinRequestInput = "";
-                Page = AppPage.Devices;
+                Page = AppPage.Home;
                 Notice = "Device added";
             }
         }
@@ -166,7 +166,7 @@ public sealed partial class AppViewModel
         }
         ParticipantInput = "";
         ParticipantAliasInput = "";
-        Page = AppPage.Devices;
+        Page = AppPage.Home;
         Notice = network.Participants.Any(item =>
             item.RosterAccepted && string.Equals(item.Npub, participant, StringComparison.Ordinal))
             ? "Device added" : "";
@@ -199,7 +199,7 @@ public sealed partial class AppViewModel
             ManualJoinAdminId = "";
             ManualJoinMeshId = "";
             SetNetworkSetupMode("");
-            Page = AppPage.Devices;
+            Page = AppPage.Home;
         }
     }
 
@@ -220,7 +220,7 @@ public sealed partial class AppViewModel
         // pre-network setup card); either way, Devices is the next
         // meaningful destination.
         SetNetworkSetupMode("");
-        Page = AppPage.Devices;
+        Page = AppPage.Home;
     }
 
     private Task ActivateInactiveNetworkAsync(string? networkId)

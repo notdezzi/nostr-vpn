@@ -18,6 +18,7 @@ namespace NostrVpn.Windows.ViewModels;
 
 public enum AppPage
 {
+    Home,
     Devices,
     AddNetwork,
     AddDevice,
@@ -35,7 +36,7 @@ public sealed partial class AppViewModel : INotifyPropertyChanged, IDisposable
     private readonly DispatcherTimer _updateTimer;
     private readonly UpdateService _updateService = new();
     private NativeAppState _state = new();
-    private AppPage _page = AppPage.Devices;
+    private AppPage _page = AppPage.Home;
     private string _selectedParticipantKey = "";
     private string _shownNetworkId = "";
     private bool _actionInFlight;
@@ -75,6 +76,7 @@ public sealed partial class AppViewModel : INotifyPropertyChanged, IDisposable
     private bool _paidRouteFilterRequireIpv6;
     private bool _paidRouteFilterEditing;
     private string _paidExitPriceMsatPerGb = "0";
+    private bool _isProMode = LoadRegistryFlag("ProMode");
     private string? _lastSyncedManualPaidExitProvider;
     private ulong? _lastSyncedPaidExitPriceMsatPerGb;
     private string _networkSetupMode = "";
@@ -189,7 +191,7 @@ public sealed partial class AppViewModel : INotifyPropertyChanged, IDisposable
             _state = value;
             if (!PageIsVisible(_page))
             {
-                _page = AppPage.Devices;
+                _page = AppPage.Home;
                 OnPropertyChanged(nameof(Page));
             }
             OnPropertyChanged();
@@ -202,7 +204,7 @@ public sealed partial class AppViewModel : INotifyPropertyChanged, IDisposable
         get => _page;
         set
         {
-            var nextPage = PageIsVisible(value) ? value : AppPage.Devices;
+            var nextPage = PageIsVisible(value) ? value : AppPage.Home;
             if (_page == nextPage)
             {
                 return;
@@ -464,6 +466,18 @@ public sealed partial class AppViewModel : INotifyPropertyChanged, IDisposable
 
     public bool UpdateInstallEnabled => UpdateAvailable && _updateUsesCoreDownload && !UpdateChecking && !UpdateInstalling;
 
+    public bool IsProMode
+    {
+        get => _isProMode;
+        set
+        {
+            if (SetField(ref _isProMode, value))
+            {
+                SaveRegistryFlag("ProMode", value);
+            }
+        }
+    }
+
     public string UpdateStripeText => string.IsNullOrWhiteSpace(State.AppVersion)
         ? $"Update available: {UpdateVersion}"
         : $"Update available: {UpdateVersion} (you're on {State.AppVersion})";
@@ -547,6 +561,51 @@ public sealed partial class AppViewModel : INotifyPropertyChanged, IDisposable
     public string ActiveNetworkDisplayNetworkId => DisplayNetworkId(ActiveNetwork?.NetworkId ?? "");
     public string HeroSubtitle => $"{State.ConnectedPeerCount} of {State.ExpectedPeerCount} connected";
     public string VpnButtonText => State.VpnEnabled ? "On" : "Off";
+    public string ConnectButtonText => State.VpnEnabled ? "Disconnect" : "Connect";
+    public string VpnHeadlineText
+    {
+        get
+        {
+            if (State.ExitNodeBlocked)
+            {
+                return "Internet blocked";
+            }
+            if (State.VpnActive)
+            {
+                return "Protected";
+            }
+            if (State.VpnEnabled || DaemonStarting(State))
+            {
+                return "Connecting…";
+            }
+            return "Not protected";
+        }
+    }
+    public Brush VpnHeadlineBrush => State.ExitNodeBlocked
+        ? ThemeService.Brush("Danger")
+        : State.VpnActive
+            ? ThemeService.Brush("Ok")
+            : ThemeService.Brush("TextSecondary");
+    public string InternetSourceSummary
+    {
+        get
+        {
+            if ((State.ExitNodeActive || State.ExitNodeBlocked)
+                && !string.IsNullOrWhiteSpace(State.ExitNodeStatusText))
+            {
+                return State.ExitNodeStatusText;
+            }
+            return State.InternetSource switch
+            {
+                "direct" => "This device's normal internet",
+                "wireguard" => "WireGuard upstream",
+                "paid_automatic" => "Paid internet (automatic)",
+                "paid_manual" => "Paid internet",
+                "private_vpn" => "Through a device in your network",
+                _ => "This device's normal internet",
+            };
+        }
+    }
     /// Mirrors `AppManager.vpnStatusText` on macOS so the header and the tray
     /// surface the same status string across platforms.
     public string VpnStatusText

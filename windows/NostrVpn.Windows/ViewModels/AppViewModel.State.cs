@@ -206,6 +206,10 @@ public sealed partial class AppViewModel
         OnPropertyChanged(nameof(VpnButtonText));
         OnPropertyChanged(nameof(VpnStatusText));
         OnPropertyChanged(nameof(VpnStatusBrush));
+        OnPropertyChanged(nameof(ConnectButtonText));
+        OnPropertyChanged(nameof(VpnHeadlineText));
+        OnPropertyChanged(nameof(VpnHeadlineBrush));
+        OnPropertyChanged(nameof(InternetSourceSummary));
         OnPropertyChanged(nameof(UpdateStripeText));
         OnPropertyChanged(nameof(ThisDeviceCopyValue));
         OnPropertyChanged(nameof(PublicFipsAddress));
@@ -381,17 +385,21 @@ public sealed partial class AppViewModel
             : null;
     }
 
-    private static bool LoadAutoInstallUpdates()
+    private static bool LoadRegistryFlag(string name)
     {
         using var key = Registry.CurrentUser.OpenSubKey(@"Software\Nostr VPN");
-        return key?.GetValue("AutoInstallUpdates") is int value && value != 0;
+        return key?.GetValue(name) is int value && value != 0;
     }
 
-    private static void SaveAutoInstallUpdates(bool enabled)
+    private static void SaveRegistryFlag(string name, bool enabled)
     {
         using var key = Registry.CurrentUser.CreateSubKey(@"Software\Nostr VPN");
-        key?.SetValue("AutoInstallUpdates", enabled ? 1 : 0, RegistryValueKind.DWord);
+        key?.SetValue(name, enabled ? 1 : 0, RegistryValueKind.DWord);
     }
+
+    private static bool LoadAutoInstallUpdates() => LoadRegistryFlag("AutoInstallUpdates");
+
+    private static void SaveAutoInstallUpdates(bool enabled) => SaveRegistryFlag("AutoInstallUpdates", enabled);
 
     private static TimeSpan LoadUpdatePollInterval()
     {

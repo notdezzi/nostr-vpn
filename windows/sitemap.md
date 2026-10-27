@@ -1,5 +1,9 @@
 # Nostr VPN Windows WPF App — Sitemap
 
+> Note: this documents the app as it was **before** the Mullvad-style rework.
+> The redesign implemented on `experimental/wpf-gui-rework` is described in
+> `windows/HANDOFF.md`.
+
 Everything the current WPF app (`windows/NostrVpn.Windows`) can do, page by page,
 written so the UI can be rebuilt from scratch without losing functionality.
 At the end there is a proposal for splitting it into a simple default UI and a

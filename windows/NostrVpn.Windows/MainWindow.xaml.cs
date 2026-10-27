@@ -47,16 +47,20 @@ public partial class MainWindow : Window
         }
     }
 
-    private void NetworkSwitcher_Click(object sender, MouseButtonEventArgs e)
+    private void NetworkSwitcherButton_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not FrameworkElement anchor)
+        if (sender is FrameworkElement anchor)
         {
-            return;
+            OpenNetworkMenu(anchor);
         }
+    }
+
+    private void OpenNetworkMenu(FrameworkElement anchor)
+    {
         var menu = new ContextMenu
         {
             PlacementTarget = anchor,
-            Placement = PlacementMode.Top,
+            Placement = PlacementMode.Bottom,
             Background = ThemeService.Brush("PanelBg"),
             BorderBrush = ThemeService.Brush("Line"),
             Foreground = ThemeService.Brush("TextPrimary"),
@@ -79,6 +83,24 @@ public partial class MainWindow : Window
         addItem.Click += (_, _) => ViewModel.ShowAddNetworkCommand.Execute(null);
         menu.Items.Add(addItem);
         menu.IsOpen = true;
+    }
+
+    private void Back_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.Page = AppPage.Home;
+    }
+
+    private void HomeDevices_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (ViewModel.Page == AppPage.Home && e.AddedItems.Count > 0)
+        {
+            ViewModel.Page = AppPage.Devices;
+        }
+    }
+
+    private void CloseProfilePopup_Click(object sender, RoutedEventArgs e)
+    {
+        ProfileButton.IsChecked = false;
     }
 
     private StackPanel NetworkMenuHeader(NativeNetworkState network)
