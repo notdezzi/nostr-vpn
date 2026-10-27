@@ -40,10 +40,11 @@ public partial class App : System.Windows.Application
         _tray.Attach(_viewModel, ShowMainWindow, ToggleMainWindow, Quit);
         _singleInstance.Start(args => Dispatcher.Invoke(() => HandleLaunchArgs(args, forceShow: true)));
 
-        // Tray-only startup, Mullvad-style: the app lives in the notification
-        // area and the window opens only from the tray icon, a deep link, or a
-        // second launch — never on its own.
-        HandleLaunchArgs(e.Args, forceShow: false);
+        // A direct launch (double-click, Start menu) surfaces the window;
+        // the autostart entry passes --hidden so Windows login keeps the app
+        // in the tray. Second launches and deep links show via
+        // HandleLaunchArgs(forceShow: true) above.
+        HandleLaunchArgs(e.Args, forceShow: !e.Args.Contains("--hidden", StringComparer.OrdinalIgnoreCase));
         TraceRosterE2E("startup args handled");
     }
 

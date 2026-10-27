@@ -30,18 +30,20 @@ where the title sits, so it never moves); on the right: Account, Wallet,
 Settings. The whole row drags the window. The titlebar back chevron also backs
 out of the Devices drill-down (detail → list → Home).
 
-**Tray-only lifecycle** (Mullvad-style): the app **starts into the system
-tray** — the window never opens on its own, only via a **single left click on
-the tray icon** (toggling it: click again to hide), the tray menu's
-"Open Nostr VPN", a deep link, or launching the exe again. **Clicking anywhere
-outside the window (e.g. the desktop) hides it** immediately; the blur-hide is
-briefly deferred so the tray click can toggle instead of fighting it, and the
-remove-device / remove-network confirmation dialogs suppress it while open.
-Closing is always **to the tray** (`OnClosing` cancels and hides; the only way
-to exit the app entirely is the tray menu's **Quit**) — the old
-"Keep running in the notification area" setting and its `CloseToTrayOnClose`
-plumbing were removed. The launch smoke runs with `-NoWindowRequired` since no
-window appears at startup.
+**Tray-only lifecycle** (Mullvad-style): a **direct launch — double-clicking
+the exe or opening it from the Start menu — shows the window** (bottom-right).
+Only the autostart entry launches with `--hidden`, so Windows login keeps the
+app in the tray. A **single left click on the tray icon** toggles the window
+(click again to hide); the tray menu's "Open Nostr VPN", deep links, and
+relaunching the exe also surface it. **Clicking anywhere outside the window
+(e.g. the desktop) hides it** immediately; the blur-hide is briefly deferred
+so the tray click can toggle instead of fighting it, and the remove-device /
+remove-network confirmation dialogs suppress it while open. Closing is always
+**to the tray** (`OnClosing` cancels and hides; the only way to exit the app
+entirely is the tray menu's **Quit**) — the old "Keep running in the
+notification area" setting and its `CloseToTrayOnClose` plumbing were removed.
+The launch smoke runs in default (window-required) mode, since a direct launch
+now shows the window.
 
 The window **spawns in the bottom-right corner of the primary work area, 10px
 from each edge** — the same placement Mullvad uses on Windows 11 (their
@@ -71,23 +73,24 @@ banner, the notice line, then the page content over the theme (dark theme is
 charcoal `#121212` with soft-gray `#888888` accent; light theme unchanged in
 spirit).
 
-**Home (new default page)** — replaces both the old header toggle area and the
-map/location idea:
-1. **Network card** — active network name, "X of Y connected", chevron. Clicking
-   opens the network switcher menu (switch / add network), same behavior as the
-   old sidebar switcher.
-2. **Devices card** — the device list (dot = reachable, name with
+**Home (new default page)** — the Mullvad "map screen" equivalent:
+1. **Devices card** — the device list (dot = reachable, name with
    This device/Admin/Exit badges, IP + state). Clicking a device opens the full
    Devices page for that device (rename, admin, remove, addresses,
    connectivity stats). Admins see **+ Add device**.
-3. **Internet card** — one row showing the current internet source in plain
+2. **Internet card** — one row showing the current internet source in plain
    text; clicking opens the full Internet page (source picker, sharing,
    WireGuard upstream, Exit DNS).
-4. **Connect / Disconnect pill** (green when off, neutral when on) with a
-   headline under it: **Protected** / **Not protected** / **Connecting…** /
+3. **Fixed bottom bar** (pinned, never scrolls away — only on Home):
+   the **network selector** (active network name, "X of Y connected", chevron —
+   clicking opens the network switcher menu: switch / add network; AutomationId
+   `HomeNetworkSwitcher`), the **Connect / Disconnect pill** (green when off,
+   neutral when on; AutomationId `ConnectToggle`), and the status headline
+   under it: **Protected** / **Not protected** / **Connecting…** /
    **Internet blocked**, plus the detailed status line.
    With no network configured, Home shows a single "Set up your network" card
-   that opens the create/join flow.
+   that opens the create/join flow (the bottom bar then shows just the toggle
+   and status).
 
 **Account page (the user icon):** a real page switch (like Settings/Wallet),
 not a popout — device name, MagicDNS name, VPN IP, **Device ID with Copy**
