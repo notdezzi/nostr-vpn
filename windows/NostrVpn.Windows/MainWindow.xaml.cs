@@ -54,15 +54,44 @@ public partial class MainWindow : Window
         }
     }
 
-    private void TitlebarClose_Click(object sender, RoutedEventArgs e)
+    private void TitlebarBack_Click(object sender, RoutedEventArgs e)
     {
-        Close();
+        if (ViewModel.Page == AppPage.Devices && ViewModel.DeviceDetailOpen)
+        {
+            ViewModel.DeviceDetailOpen = false;
+            return;
+        }
+        ViewModel.Page = AppPage.Home;
     }
 
 
+    private bool _suppressHideOnDeactivate;
+
+    // Tray-only app, Mullvad-style: closing always goes to the tray (Quit is in
+    // the tray menu), and clicking anywhere outside the window hides it again.
+    // The hide is deferred slightly so a tray-icon click can win and toggle the
+    // window instead of fighting the blur-hide.
+    protected override void OnDeactivated(EventArgs e)
+    {
+        base.OnDeactivated(e);
+        if (_suppressHideOnDeactivate || !IsVisible)
+        {
+            return;
+        }
+        Dispatcher.BeginInvoke(
+            new Action(() =>
+            {
+                if (!_suppressHideOnDeactivate && IsVisible && !IsActive)
+                {
+                    Hide();
+                }
+            }),
+            System.Windows.Threading.DispatcherPriority.Background);
+    }
+
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
     {
-        if (!App.IsQuitting && ViewModel.State.CloseToTrayOnClose)
+        if (!App.IsQuitting)
         {
             e.Cancel = true;
             Hide();
@@ -117,17 +146,6 @@ public partial class MainWindow : Window
         menu.IsOpen = true;
     }
 
-    private void Back_Click(object sender, RoutedEventArgs e)
-    {
-        ViewModel.DeviceDetailOpen = false;
-        ViewModel.Page = AppPage.Home;
-    }
-
-    private void DeviceDetailBack_Click(object sender, RoutedEventArgs e)
-    {
-        ViewModel.DeviceDetailOpen = false;
-    }
-
     private void HomeDevices_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (ViewModel.Page == AppPage.Home && e.AddedItems.Count > 0)
@@ -173,14 +191,22 @@ public partial class MainWindow : Window
         if (sender is Button { Tag: NativeParticipantState participant })
         {
             var name = string.IsNullOrWhiteSpace(participant.DisplayName) ? "this device" : participant.DisplayName;
-            var result = MessageBox.Show(
-                this,
-                "This removes the device from the network's roster. They keep the network locally but won't be in this roster anymore.",
-                $"Remove {name}?",
-                MessageBoxButton.OKCancel,
-                MessageBoxImage.Warning,
-                MessageBoxResult.Cancel);
-            if (result != MessageBoxResult.OK) return;
+            _suppressHideOnDeactivate = true;
+            try
+            {
+                var result = MessageBox.Show(
+                    this,
+                    "This removes the device from the network's roster. They keep the network locally but won't be in this roster anymore.",
+                    $"Remove {name}?",
+                    MessageBoxButton.OKCancel,
+                    MessageBoxImage.Warning,
+                    MessageBoxResult.Cancel);
+                if (result != MessageBoxResult.OK) return;
+            }
+            finally
+            {
+                _suppressHideOnDeactivate = false;
+            }
             await ViewModel.RemoveParticipantAsync(participant);
         }
     }
@@ -483,14 +509,6 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void CloseToTray_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is CheckBox checkBox)
-        {
-            await ViewModel.SetCloseToTrayAsync(checkBox.IsChecked == true);
-        }
-    }
-
     private async void ActivateNetwork_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: string networkId })
@@ -505,14 +523,22 @@ public partial class MainWindow : Window
         {
             var network = ViewModel.State.Networks.FirstOrDefault(n => n.Id == networkId);
             var name = string.IsNullOrWhiteSpace(network?.Name) ? "this network" : network!.Name;
-            var result = MessageBox.Show(
-                this,
-                "This deletes the network from this device.",
-                $"Remove {name}?",
-                MessageBoxButton.OKCancel,
-                MessageBoxImage.Warning,
-                MessageBoxResult.Cancel);
-            if (result != MessageBoxResult.OK) return;
+            _suppressHideOnDeactivate = true;
+            try
+            {
+                var result = MessageBox.Show(
+                    this,
+                    "This deletes the network from this device.",
+                    $"Remove {name}?",
+                    MessageBoxButton.OKCancel,
+                    MessageBoxImage.Warning,
+                    MessageBoxResult.Cancel);
+                if (result != MessageBoxResult.OK) return;
+            }
+            finally
+            {
+                _suppressHideOnDeactivate = false;
+            }
             await ViewModel.RemoveNetworkAsync(networkId);
         }
     }

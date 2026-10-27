@@ -836,13 +836,6 @@ public sealed partial class AppViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public Task SetCloseToTrayAsync(bool enabled)
-    {
-        return DispatchAsync(
-            NativeActions.UpdateSettings(new SettingsPatch { CloseToTrayOnClose = enabled }),
-            "Saving tray behavior");
-    }
-
     public Task SetAutoconnectAsync(bool enabled)
     {
         return DispatchAsync(

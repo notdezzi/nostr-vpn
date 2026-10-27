@@ -37,16 +37,14 @@ public partial class App : System.Windows.Application
         TraceRosterE2E("view model ready");
         _window = new MainWindow(_viewModel);
         _tray = new TrayService();
-        _tray.Attach(_viewModel, ShowMainWindow, Quit);
+        _tray.Attach(_viewModel, ShowMainWindow, ToggleMainWindow, Quit);
         _singleInstance.Start(args => Dispatcher.Invoke(() => HandleLaunchArgs(args, forceShow: true)));
 
+        // Tray-only startup, Mullvad-style: the app lives in the notification
+        // area and the window opens only from the tray icon, a deep link, or a
+        // second launch — never on its own.
         HandleLaunchArgs(e.Args, forceShow: false);
         TraceRosterE2E("startup args handled");
-
-        if (!e.Args.Contains("--hidden", StringComparer.OrdinalIgnoreCase))
-        {
-            ShowMainWindow();
-        }
     }
 
     private static void TraceRosterE2E(string message)
@@ -160,6 +158,16 @@ public partial class App : System.Windows.Application
         }
         _window.Show();
         _window.Activate();
+    }
+
+    private void ToggleMainWindow()
+    {
+        if (_window is { IsVisible: true })
+        {
+            _window.Hide();
+            return;
+        }
+        ShowMainWindow();
     }
 
     private void Quit()

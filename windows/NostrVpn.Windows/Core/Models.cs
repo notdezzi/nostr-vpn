@@ -91,7 +91,6 @@ public sealed class NativeAppState
     public string MagicDnsStatus { get; set; } = "";
     public bool Autoconnect { get; set; }
     public bool LaunchOnStartup { get; set; }
-    public bool CloseToTrayOnClose { get; set; }
     public ulong ConnectedPeerCount { get; set; }
     public ulong ExpectedPeerCount { get; set; }
     public ulong FipsConnectedPeerCount { get; set; }

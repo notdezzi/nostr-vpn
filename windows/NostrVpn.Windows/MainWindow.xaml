@@ -62,7 +62,37 @@
 
     <Border Grid.Row="0" Padding="12,5" Background="{DynamicResource WindowBg}" BorderBrush="{DynamicResource Line}" BorderThickness="0,0,0,1" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
       <DockPanel LastChildFill="False">
-        <TextBlock Text="Nostr VPN" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" Margin="4,0,0,0" />
+        <!-- Fixed left slot: the back chevron sits exactly where the app title
+             sits on Home, so the control never moves between pages. -->
+        <Grid DockPanel.Dock="Left" VerticalAlignment="Center">
+          <TextBlock Text="Nostr VPN" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" Margin="4,0,0,0">
+            <TextBlock.Style>
+              <Style TargetType="{x:Type TextBlock}">
+                <Setter Property="Visibility" Value="Collapsed" />
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding Page, Converter={StaticResource PageVisibility}, ConverterParameter=Home}" Value="Visible">
+                    <Setter Property="Visibility" Value="Visible" />
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </TextBlock.Style>
+          </TextBlock>
+          <Button Click="TitlebarBack_Click" ToolTip="Back" HorizontalAlignment="Left">
+            <Button.Style>
+              <Style TargetType="{x:Type Button}" BasedOn="{StaticResource HeaderIconButton}">
+                <Setter Property="Width" Value="32" />
+                <Setter Property="Height" Value="30" />
+                <Setter Property="Visibility" Value="Visible" />
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding Page, Converter={StaticResource PageVisibility}, ConverterParameter=Home}" Value="Visible">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </Button.Style>
+            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72B;" FontSize="14" />
+          </Button>
+        </Grid>
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
           <Button Style="{StaticResource HeaderIconButton}" Width="32" Height="30" Command="{Binding ShowAccountCommand}" ToolTip="Account">
             <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE77B;" FontSize="14" />
@@ -74,9 +104,6 @@
           </Button>
           <Button Style="{StaticResource HeaderIconButton}" Width="32" Height="30" Command="{Binding ShowSettingsCommand}" ToolTip="Settings">
             <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE713;" FontSize="14" />
-          </Button>
-          <Button Style="{StaticResource HeaderIconButton}" Width="32" Height="30" Click="TitlebarClose_Click" ToolTip="Close">
-            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8BB;" FontSize="12" />
           </Button>
         </StackPanel>
       </DockPanel>
@@ -226,7 +253,6 @@
 
           <!-- ==================== Account ==================== -->
           <StackPanel Visibility="{Binding Page, Converter={StaticResource PageVisibility}, ConverterParameter=Account}">
-            <Button Click="Back_Click" HorizontalAlignment="Left" Margin="0,0,0,14"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72B;" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0" /><TextBlock Text="Back" VerticalAlignment="Center" /></StackPanel></Button>
             <TextBlock Text="Account" FontSize="24" FontWeight="SemiBold" Margin="0,0,0,14" />
 
             <Border Style="{StaticResource Card}">
@@ -278,7 +304,6 @@
 
           <!-- ==================== Devices ==================== -->
           <StackPanel Visibility="{Binding Page, Converter={StaticResource PageVisibility}, ConverterParameter=Devices}">
-            <Button Click="Back_Click" HorizontalAlignment="Left" Margin="0,0,0,14"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72B;" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0" /><TextBlock Text="Back" VerticalAlignment="Center" /></StackPanel></Button>
 
             <StackPanel Visibility="{Binding HasActiveNetwork, Converter={StaticResource InverseBoolToVisibility}}">
               <Border Style="{StaticResource Card}" Visibility="{Binding ShowNetworkSetupChoices, Converter={StaticResource BoolToVisibility}}">
@@ -395,7 +420,6 @@
 
               <Border Style="{StaticResource Card}" Visibility="{Binding DeviceDetailOpen, Converter={StaticResource BoolToVisibility}}">
                 <StackPanel>
-                  <Button Click="DeviceDetailBack_Click" HorizontalAlignment="Left" Margin="0,0,0,12"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72B;" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0" /><TextBlock Text="Devices" VerticalAlignment="Center" /></StackPanel></Button>
                   <StackPanel Visibility="{Binding SelectedParticipant, Converter={StaticResource ObjectToVisibility}}">
                     <StackPanel Orientation="Horizontal">
                       <Ellipse Width="8" Height="8" Fill="{DynamicResource TextSecondary}" Margin="0,7,7,0" />
@@ -519,7 +543,6 @@
 
           <!-- ==================== Add Network ==================== -->
           <StackPanel Visibility="{Binding Page, Converter={StaticResource PageVisibility}, ConverterParameter=AddNetwork}">
-            <Button Click="Back_Click" HorizontalAlignment="Left" Margin="0,0,0,14"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72B;" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0" /><TextBlock Text="Back" VerticalAlignment="Center" /></StackPanel></Button>
             <Border Style="{StaticResource Card}" Visibility="{Binding ShowNetworkSetupChoices, Converter={StaticResource BoolToVisibility}}">
               <StackPanel>
                 <TextBlock Text="Set up your network" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,4" />
@@ -567,7 +590,6 @@
 
           <!-- ==================== Add Device ==================== -->
           <StackPanel Visibility="{Binding Page, Converter={StaticResource PageVisibility}, ConverterParameter=AddDevice}">
-            <Button Click="Back_Click" HorizontalAlignment="Left" Margin="0,0,0,14"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72B;" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0" /><TextBlock Text="Back" VerticalAlignment="Center" /></StackPanel></Button>
             <Border Style="{StaticResource Card}" Visibility="{Binding ShowLinkDeviceCard, Converter={StaticResource BoolToVisibility}}">
               <StackPanel>
                 <TextBlock Text="Link Device" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,4" />
@@ -597,7 +619,6 @@
 
           <!-- ==================== Internet ==================== -->
           <StackPanel Visibility="{Binding Page, Converter={StaticResource PageVisibility}, ConverterParameter=Internet}">
-            <Button Click="Back_Click" HorizontalAlignment="Left" Margin="0,0,0,14"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72B;" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0" /><TextBlock Text="Back" VerticalAlignment="Center" /></StackPanel></Button>
             <Border Style="{StaticResource Card}">
               <StackPanel>
                 <TextBlock Text="Internet Source" FontSize="18" FontWeight="SemiBold" />
@@ -716,7 +737,6 @@
 
           <!-- ==================== Public Exits ==================== -->
           <StackPanel Visibility="{Binding Page, Converter={StaticResource PageVisibility}, ConverterParameter=PublicExits}">
-            <Button Click="Back_Click" HorizontalAlignment="Left" Margin="0,0,0,14"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72B;" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0" /><TextBlock Text="Back" VerticalAlignment="Center" /></StackPanel></Button>
             <TextBlock Text="{Binding State.ExitNodeStatusText}" Style="{StaticResource HelperText}" Margin="0,0,0,10" AutomationProperties.AutomationId="PaidExitCurrentInternet" />
             <Border Style="{StaticResource Card}">
               <StackPanel>
@@ -812,7 +832,6 @@
 
           <!-- ==================== Sell Access ==================== -->
           <StackPanel Visibility="{Binding Page, Converter={StaticResource PageVisibility}, ConverterParameter=SellAccess}">
-            <Button Click="Back_Click" HorizontalAlignment="Left" Margin="0,0,0,14"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72B;" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0" /><TextBlock Text="Back" VerticalAlignment="Center" /></StackPanel></Button>
             <Border Style="{StaticResource Card}">
               <StackPanel>
                 <TextBlock Text="Share My Internet" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10" />
@@ -862,7 +881,6 @@
 
           <!-- ==================== Settings ==================== -->
           <StackPanel Visibility="{Binding Page, Converter={StaticResource PageVisibility}, ConverterParameter=Settings}">
-            <Button Click="Back_Click" HorizontalAlignment="Left" Margin="0,0,0,14"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72B;" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0" /><TextBlock Text="Back" VerticalAlignment="Center" /></StackPanel></Button>
             <TextBlock Text="Settings" FontSize="24" FontWeight="SemiBold" Margin="0,0,0,14" />
 
             <Border Style="{StaticResource Card}">
@@ -882,7 +900,6 @@
                 <TextBlock Text="General" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10" />
                 <CheckBox Style="{StaticResource SwitchCheckBox}" Content="Connect automatically when the app starts" IsChecked="{Binding State.Autoconnect, Mode=OneWay}" Click="Autoconnect_Click" />
                 <CheckBox Style="{StaticResource SwitchCheckBox}" Content="Start Nostr VPN when I log in to Windows" IsChecked="{Binding State.LaunchOnStartup, Mode=OneWay}" Click="LaunchOnStartup_Click" />
-                <CheckBox Style="{StaticResource SwitchCheckBox}" Content="Keep running in the notification area when the window is closed" IsChecked="{Binding State.CloseToTrayOnClose, Mode=OneWay}" Click="CloseToTray_Click" />
               </StackPanel>
             </Border>
 

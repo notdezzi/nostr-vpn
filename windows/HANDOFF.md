@@ -20,10 +20,25 @@ navigation changed. Build verified with `scripts/windows-build.ps1
 
 The window is **borderless, fixed at Mullvad's exact size (320x568),
 non-resizable** (`WindowStyle="None"` + `WindowChrome` with a 1px glass frame,
-so the DWM drop shadow and Windows 11 rounded corners remain). There is a
-**custom minimal titlebar**: the app name on the left, then Account / Wallet /
-Settings icons and a close button on the right; dragging anywhere on the
-titlebar moves the window.
+so the DWM drop shadow and Windows 11 rounded corners remain). The titlebar
+has **no close button** — on the left there is a fixed slot that shows the
+"Nostr VPN" title on Home and a **back chevron on every other page** (exactly
+where the title sits, so it never moves); on the right: Account, Wallet,
+Settings. The whole row drags the window. The titlebar back chevron also backs
+out of the Devices drill-down (detail → list → Home).
+
+**Tray-only lifecycle** (Mullvad-style): the app **starts into the system
+tray** — the window never opens on its own, only via a **single left click on
+the tray icon** (toggling it: click again to hide), the tray menu's
+"Open Nostr VPN", a deep link, or launching the exe again. **Clicking anywhere
+outside the window (e.g. the desktop) hides it** immediately; the blur-hide is
+briefly deferred so the tray click can toggle instead of fighting it, and the
+remove-device / remove-network confirmation dialogs suppress it while open.
+Closing is always **to the tray** (`OnClosing` cancels and hides; the only way
+to exit the app entirely is the tray menu's **Quit**) — the old
+"Keep running in the notification area" setting and its `CloseToTrayOnClose`
+plumbing were removed. The launch smoke runs with `-NoWindowRequired` since no
+window appears at startup.
 
 The window **spawns in the bottom-right corner of the primary work area, 10px
 from each edge** — the same placement Mullvad uses on Windows 11 (their
@@ -36,11 +51,12 @@ Scrollbars are **custom minimal**: 8px rounded thumb (`ScrollThumb` /
 globally via a `ScrollBar` style in `App.xaml` (vertical and horizontal).
 
 Mullvad's 320px width forced single-column layouts everywhere: the Devices
-page became a **drill-down** (list card, then a device detail card with a
-"‹ Devices" back button, driven by the `DeviceDetailOpen` view-model flag),
-dense button rows (rename/hints/actions, Public Exits filters and offer
-actions, System tools, update banner) wrap instead of using side-by-side
-columns, and the Internet source picker shows title + subtitle stacked.
+page became a **drill-down** (list card, then a device detail card, driven by
+the `DeviceDetailOpen` view-model flag), dense button rows (rename/hints/
+actions, Public Exits filters and offer actions, System tools, update banner)
+wrap instead of using side-by-side columns, and the Internet source picker
+shows title + subtitle stacked. The in-content Back buttons were removed —
+the titlebar chevron is the single back control.
 
 ## New information architecture
 
@@ -75,17 +91,17 @@ not a popout — device name, MagicDNS name, VPN IP, **Device ID with Copy**
 (with a plain hint: "Share this with a network admin so they can add you"), a
 **Wallet card (balance + Open wallet)**, and the app/daemon version.
 
-**Back navigation:** every sub-page (Account, Devices, Add Network, Add Device,
-Internet, Public Exits, Wallet, Sell Access, Settings) has a **‹ Back** button
-to Home.
+**Back navigation:** every sub-page (Account, Devices, Add Network, Add
+Device, Internet, Public Exits, Wallet, Sell Access, Settings) is left via the
+**‹ chevron in the titlebar** (where the app title sits on Home) — there are
+no in-content Back buttons anymore.
 
 ## Settings — sorted and renamed
 
 Normal (always visible), in order:
 1. **Appearance** — Theme: System / Light / Dark.
 2. **General** — "Connect automatically when the app starts", "Start Nostr VPN
-   when I log in to Windows", "Keep running in the notification area when the
-   window is closed".
+   when I log in to Windows".
 3. **Updates** — status line, "Check now", "Install updates automatically".
 4. **Network** — rename active network, "Remove this network", "Create or join
    a network", and the list of inactive networks with Activate/Remove.
@@ -121,9 +137,10 @@ internet", "Through a device in your network", "Paid internet (automatic)", …)
   `ExitDnsInternetNavigation` (now the Home internet row),
   `ManualJoinAdminOpen` (now the Home "+ Add device"), and the new
   `HomeNetworkSwitcher` / `ConnectToggle`.
-- **Tray menu**, deep links (`nvpn://join-request/…`), close-to-tray, refresh
-  cadence, join coordination fast-refresh, update polling, themes
-  (Light/Dark/System), and single-instance behavior.
+- **Tray menu**, deep links (`nvpn://join-request/…`), refresh cadence, join
+  coordination fast-refresh, update polling, themes (Light/Dark/System), and
+  single-instance behavior. (Close-to-tray is now unconditional; the tray
+  icon click toggles the window instead of the old double-click.)
 - Pages the user never asked to move: Public Exits (paid market), Sell Access,
   and the Wallet keep their content, just restyled and reachable via
   Back buttons and the header wallet button.
@@ -133,10 +150,12 @@ ViewModel additions (small, additive): `AppPage.Home` and `AppPage.Account`
 `IsProMode` (persisted in `HKCU\Software\Nostr VPN\ProMode`),
 `ConnectButtonText`, `VpnHeadlineText` / `VpnHeadlineBrush`,
 `InternetSourceSummary`, and `DeviceDetailOpen` for the Devices drill-down.
-Removed with the compact titlebar: `WalletNavigationText` and its
+Removed during the compact-titlebar pass: `WalletNavigationText` and its
 `NavigationBalanceText` model field (the header wallet button is icon-only
-now; the balance is on the Account and Wallet pages). Enrollment flows now
-land on Home instead of Devices.
+now; the balance is on the Account and Wallet pages), and the close-to-tray
+setting (`SetCloseToTrayAsync`, `SettingsPatch.CloseToTrayOnClose`,
+`NativeAppState.CloseToTrayOnClose`) since closing now always goes to the
+tray. Enrollment flows now land on Home instead of Devices.
 
 Theme: `Themes/Dark.xaml` is a charcoal palette — background `#121212`, cards
 `#1E1E1E`, primary text `#E0E0E0`, secondary text `#B0B0B0`, borders

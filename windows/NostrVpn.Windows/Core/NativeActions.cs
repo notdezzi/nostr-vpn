@@ -114,5 +114,4 @@ public sealed class SettingsPatch
     public string? FipsHostInboundTcpPorts { get; set; }
     public bool? Autoconnect { get; set; }
     public bool? LaunchOnStartup { get; set; }
-    public bool? CloseToTrayOnClose { get; set; }
 }

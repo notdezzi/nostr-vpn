@@ -3,7 +3,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="clr-namespace:NostrVpn.Windows.Controls">
 <StackPanel Visibility="{Binding Page, Converter={StaticResource PageVisibility}, ConverterParameter=Wallet}">
-  <Button Click="Back_Click" HorizontalAlignment="Left" Margin="0,0,0,14"><StackPanel Orientation="Horizontal"><TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72B;" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0" /><TextBlock Text="Back" VerticalAlignment="Center" /></StackPanel></Button>
   <TextBlock Text="Wallet" FontSize="24" FontWeight="SemiBold" Margin="0,0,0,4" />
   <TextBlock Text="Pay for internet access and receive earnings when you sell bandwidth." Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,0,0,12" />
   <Border Style="{StaticResource Card}">

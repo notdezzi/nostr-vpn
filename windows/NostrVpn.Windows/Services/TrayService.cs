@@ -14,6 +14,7 @@ public sealed class TrayService : IDisposable
     private readonly Icon _blockedIcon;
     private AppViewModel? _viewModel;
     private Action? _showWindow;
+    private Action? _toggleWindow;
     private Action? _quit;
 
     public TrayService()
@@ -26,13 +27,24 @@ public sealed class TrayService : IDisposable
             Text = "Nostr VPN",
             Visible = true,
         };
-        _notifyIcon.DoubleClick += (_, _) => _showWindow?.Invoke();
+        // Mullvad-style tray behavior: a single left click opens the window
+        // (and hides it again when it is already open); the menu handles the
+        // rest. DoubleClick is intentionally unused so it doesn't fight the
+        // click toggle.
+        _notifyIcon.MouseClick += (_, args) =>
+        {
+            if (args.Button == MouseButtons.Left)
+            {
+                _toggleWindow?.Invoke();
+            }
+        };
     }
 
-    public void Attach(AppViewModel viewModel, Action showWindow, Action quit)
+    public void Attach(AppViewModel viewModel, Action showWindow, Action toggleWindow, Action quit)
     {
         _viewModel = viewModel;
         _showWindow = showWindow;
+        _toggleWindow = toggleWindow;
         _quit = quit;
         viewModel.PropertyChanged += (_, _) => Update();
         Update();

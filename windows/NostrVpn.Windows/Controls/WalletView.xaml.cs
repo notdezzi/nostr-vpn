@@ -14,11 +14,6 @@ public partial class WalletView : UserControl
 
     private AppViewModel ViewModel => (AppViewModel)DataContext;
 
-    private void Back_Click(object sender, RoutedEventArgs e)
-    {
-        ViewModel.Page = AppPage.Home;
-    }
-
     private async void RefreshPaidRouteWallet_Click(object sender, RoutedEventArgs e) =>
         await ViewModel.RefreshPaidRouteWalletAsync();
 
