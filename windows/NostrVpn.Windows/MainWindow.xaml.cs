@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -28,14 +29,23 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
+
     // Spawn like Mullvad: 10px inside the bottom-right corner of the primary
-    // work area (their getWindowMargin for Windows 11).
+    // work area (their getWindowMargin for Windows 11), with DWM-rounded
+    // corners — borderless WS_POPUP windows are not rounded by default, so
+    // this has to be requested explicitly.
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
         var workArea = SystemParameters.WorkArea;
         Left = workArea.Right - Width - 10;
         Top = workArea.Bottom - Height - 10;
+
+        var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+        var roundCorners = 2; // DWMWCP_ROUND
+        _ = DwmSetWindowAttribute(hwnd, 33 /* DWMWA_WINDOW_CORNER_PREFERENCE */, ref roundCorners, sizeof(int));
     }
 
     private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)

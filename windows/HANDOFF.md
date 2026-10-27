@@ -19,8 +19,11 @@ navigation changed. Build verified with `scripts/windows-build.ps1
 ## Window behavior (Mullvad-style)
 
 The window is **borderless, fixed at Mullvad's exact size (320x568),
-non-resizable** (`WindowStyle="None"` + `WindowChrome` with a 1px glass frame,
-so the DWM drop shadow and Windows 11 rounded corners remain). The titlebar
+non-resizable, with rounded corners** (`WindowStyle="None"` + `WindowChrome`
+with a 1px glass frame for the DWM drop shadow, and an explicit
+`DwmSetWindowAttribute(DWMWA_WINDOW_CORNER_PREFERENCE, ROUND)` call on
+`OnSourceInitialized` — borderless windows are not rounded by default on
+Windows 11; older systems just stay square). The titlebar
 has **no close button** — on the left there is a fixed slot that shows the
 "Nostr VPN" title on Home and a **back chevron on every other page** (exactly
 where the title sits, so it never moves); on the right: Account, Wallet,
