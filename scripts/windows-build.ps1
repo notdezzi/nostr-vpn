@@ -12,7 +12,6 @@ param(
 
 $ErrorActionPreference = "Stop"
 $Root = Resolve-Path (Join-Path $PSScriptRoot "..")
-$Project = Join-Path $Root "windows\NostrVpn.Windows\NostrVpn.Windows.csproj"
 $CargoTargetRoot = if ($env:CARGO_TARGET_DIR) { $env:CARGO_TARGET_DIR } else { Join-Path $Root "target" }
 $CargoProfile = if ($Configuration -eq "Release") { "release" } else { "debug" }
 $WorkspaceCargoToml = Join-Path $Root "Cargo.toml"
@@ -233,25 +232,30 @@ try {
   }
 
   $CargoOutputDir = Join-Path $CargoTargetRoot $CargoProfile
-  $AppCargoDir = $CargoOutputDir
-  New-Item -ItemType Directory -Force -Path $AppCargoDir | Out-Null
-  foreach ($FileName in @("nostr_vpn_app_core.dll", "nvpn.exe")) {
-    $Source = Join-Path $CargoOutputDir $FileName
-    $Destination = Join-Path $AppCargoDir $FileName
-    Copy-RequiredFile $Source $Destination $FileName
-  }
-  $AppBinariesDir = Join-Path $AppCargoDir "binaries"
-  Copy-RequiredFile (Join-Path $CargoOutputDir "wintun.dll") (Join-Path $AppBinariesDir "wintun.dll") "wintun.dll"
 
-  if ($Publish -or $Installer) {
-    $SelfContained = if ($Installer) { "true" } else { "false" }
-    Invoke-Checked dotnet @("publish", $Project, "-c", $Configuration, "-r", $Runtime, "--self-contained", $SelfContained, "-p:Deterministic=true", "-p:ContinuousIntegrationBuild=true", "-p:NvpnCargoArtifactsDir=$AppCargoDir")
-    $DotnetOutputDir = Join-Path $Root "windows\NostrVpn.Windows\bin\$Configuration\net8.0-windows\$Runtime\publish"
-  } else {
-    Invoke-Checked dotnet @("build", $Project, "-c", $Configuration, "-p:Deterministic=true", "-p:ContinuousIntegrationBuild=true", "-p:NvpnCargoArtifactsDir=$AppCargoDir")
-    $DotnetOutputDir = Join-Path $Root "windows\NostrVpn.Windows\bin\$Configuration\net8.0-windows"
+  # Slint GUI shell. The crate is excluded from the workspace and carries its
+  # own lockfile; the payload layout is staged straight from cargo outputs.
+  $GuiManifest = Join-Path $Root "windows\nostr-vpn-windows\Cargo.toml"
+  $GuiCargoArgs = @("build", "--manifest-path", $GuiManifest) + $CargoLockArgs
+  if ($Configuration -eq "Release") {
+    $GuiCargoArgs += "--release"
   }
-  Assert-BundledWindowsHelpers $DotnetOutputDir
+  Invoke-Checked cargo $GuiCargoArgs
+  $GuiOutputDir = if ($env:CARGO_TARGET_DIR) {
+    Join-Path $CargoTargetRoot $CargoProfile
+  } else {
+    Join-Path $Root "windows\nostr-vpn-windows\target\$CargoProfile"
+  }
+
+  # App payload the installer ships: Slint shell + daemon + bundled wintun.
+  $StageDir = Join-Path $CargoTargetRoot (Join-Path $CargoProfile "NostrVpnWindows")
+  New-Item -ItemType Directory -Force -Path (Join-Path $StageDir "binaries") | Out-Null
+  New-Item -ItemType Directory -Force -Path (Join-Path $StageDir "Assets") | Out-Null
+  Copy-RequiredFile (Join-Path $GuiOutputDir "nostr-vpn-gui.exe") (Join-Path $StageDir "nostr-vpn-gui.exe") "nostr-vpn-gui.exe"
+  Copy-RequiredFile (Join-Path $CargoOutputDir "nvpn.exe") (Join-Path $StageDir "nvpn.exe") "nvpn.exe"
+  Copy-RequiredFile (Join-Path $CargoOutputDir "wintun.dll") (Join-Path $StageDir "binaries\wintun.dll") "wintun.dll"
+  Copy-RequiredFile (Join-Path $Root "windows\NostrVpn.Windows\Assets\nostr-vpn.ico") (Join-Path $StageDir "Assets\nostr-vpn.ico") "nostr-vpn.ico"
+  Assert-BundledWindowsHelpers $StageDir
 
   if ($Installer) {
     if ($Runtime -ne "win-x64") {
@@ -268,9 +272,9 @@ try {
     $InstallerOutputDir = if ($OutputDir) { Resolve-OutputPath $OutputDir } else { Join-Path $Root "dist" }
     New-Item -ItemType Directory -Force -Path $InstallerOutputDir | Out-Null
 
-    $PublishDir = $DotnetOutputDir
-    if (!(Test-Path (Join-Path $PublishDir "NostrVpn.Windows.exe"))) {
-      throw "Published Windows app not found in $PublishDir"
+    $PublishDir = $StageDir
+    if (!(Test-Path (Join-Path $PublishDir "nostr-vpn-gui.exe"))) {
+      throw "Staged Windows app not found in $PublishDir"
     }
 
     $env:NVPN_RELEASE_VERSION = $Version
@@ -288,7 +292,7 @@ try {
   }
 
   if ($Run) {
-    $exe = Join-Path $Root "windows\NostrVpn.Windows\bin\$Configuration\net8.0-windows\NostrVpn.Windows.exe"
+    $exe = Join-Path $GuiOutputDir "nostr-vpn-gui.exe"
     if (!(Test-Path $exe)) {
       throw "Built Windows app not found: $exe"
     }

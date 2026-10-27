@@ -1,0 +1,34 @@
+[package]
+name = "nostr-vpn-windows"
+version = "4.1.18"
+description = "Simple private networks over FIPS and Nostr."
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "nostr-vpn-gui"
+path = "src/main.rs"
+
+[dependencies]
+arboard = "3"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "bmp", "gif"] }
+nostr-vpn-app-core = { path = "../../crates/nostr-vpn-app-core" }
+nostr-vpn-core = { path = "../../crates/nostr-vpn-core", features = ["updater"] }
+qrcode = { version = "0.14", default-features = false }
+rfd = "0.15"
+rqrr = "0.10"
+slint = "1.18"
+winreg = "0.55"
+windows-sys = { version = "0.59", features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_Storage",
+    "Win32_Storage_FileSystem",
+    "Win32_System_IO",
+    "Win32_System_Pipes",
+    "Win32_System_Threading",
+    "Win32_UI_Shell",
+] }
+
+[build-dependencies]
+slint-build = "1.18"

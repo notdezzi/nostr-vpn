@@ -118,6 +118,21 @@ const targets = [
       version,
     ),
   ),
+  makeTarget('windows/nostr-vpn-windows/Cargo.toml', (text, version) =>
+    text.replace(
+      /^(version\s*=\s*")[^"\n]+(")/m,
+      (_, prefix, suffix) => `${prefix}${version}${suffix}`,
+    ),
+  ),
+  // The Slint GUI shell is excluded from the workspace and carries its own
+  // lockfile, so its packages need the same version bump.
+  makeTarget('windows/nostr-vpn-windows/Cargo.lock', (text, version) =>
+    bumpCargoLockPackages(
+      text,
+      ['nostr-vpn-app-core', 'nostr-vpn-core', 'nostr-vpn-windows'],
+      version,
+    ),
+  ),
   // ios/project.yml + macos/project.yml use plain ${NVPN_APP_VERSION_NAME} /
   // ${NVPN_APP_VERSION_CODE} substitution. Entry-point scripts resolve those
   // immediately before xcodegen: macOS derives both from Cargo, while iOS uses

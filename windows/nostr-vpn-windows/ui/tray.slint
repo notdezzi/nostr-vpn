@@ -1,0 +1,109 @@
+// Nostr VPN tray icon. Mirrors the WPF TrayService menu layout:
+// VPN toggle, status, device section, network devices, internet sources,
+// open/quit. State is pushed from Rust on every applied state.
+
+export struct TrayDeviceRow {
+    title: string,
+    npub: string,
+}
+
+// kind: 1 share-toggle, 2 direct, 3 paid-auto, 4 paid-manual, 5 wireguard, 6 peer
+export struct TrayExitRow {
+    title: string,
+    checked: bool,
+    enabled: bool,
+    kind: int,
+    arg: string,
+}
+
+export component NostrVpnTray inherits SystemTrayIcon {
+    in-out property <string> tray-tooltip <=> root.tooltip;
+    // Default keeps tray-item creation away from an empty image, which the
+    // Windows backend refuses to render.
+    in-out property <image> tray-icon: @image-url("../assets/tray-24.png");
+    in-out property <bool> vpn-on;
+    in-out property <bool> vpn-toggle-enabled;
+    in-out property <string> status-text;
+    in-out property <string> device-name;
+    in-out property <bool> can-copy-device;
+    in-out property <bool> has-network;
+    in-out property <string> network-title;
+    in-out property <[TrayDeviceRow]> devices;
+    in-out property <string> exit-status;
+    in-out property <bool> share-checked;
+    in-out property <bool> market-visible;
+    in-out property <[TrayExitRow]> exits;
+
+    callback toggle-vpn();
+    callback copy-device();
+    callback copy-text(string);
+    callback share-toggle();
+    callback tray-select-exit(int, string);
+    callback open-window();
+    callback quit-app();
+
+    icon: root.tray-icon;
+    clicked => { root.open-window(); }
+
+    Menu {
+        MenuItem {
+            title: "Nostr VPN";
+            checkable: true;
+            checked: root.vpn-on;
+            enabled: root.vpn-toggle-enabled;
+            activated => { root.toggle-vpn(); }
+        }
+        MenuItem {
+            title: root.status-text;
+            enabled: false;
+        }
+        MenuSeparator {}
+        MenuItem {
+            title: root.device-name;
+            enabled: false;
+        }
+        MenuItem {
+            title: "Copy Device ID";
+            enabled: root.can-copy-device;
+            activated => { root.copy-device(); }
+        }
+        MenuSeparator {}
+        if root.has-network : Menu {
+            title: root.network-title;
+            for device in root.devices : MenuItem {
+                title: device.title;
+                activated => { root.copy-text(device.npub); }
+            }
+        }
+        if root.has-network : Menu {
+            title: "Internet Source";
+            if root.exit-status != "" : MenuItem {
+                title: root.exit-status;
+                enabled: false;
+            }
+            MenuItem {
+                title: "Share This Device";
+                checkable: true;
+                checked: root.share-checked;
+                activated => { root.share-toggle(); }
+            }
+            MenuSeparator {}
+            for exit in root.exits : MenuItem {
+                title: exit.title;
+                enabled: exit.enabled;
+                checkable: true;
+                checked: exit.checked;
+                activated => { root.tray-select-exit(exit.kind, exit.arg); }
+            }
+        }
+        MenuSeparator {}
+        MenuItem {
+            title: "Open Nostr VPN";
+            activated => { root.open-window(); }
+        }
+        MenuItem {
+            title: "Quit";
+            activated => { root.quit-app(); }
+        }
+    }
+}

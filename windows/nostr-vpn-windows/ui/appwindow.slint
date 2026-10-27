@@ -1,0 +1,1905 @@
+// Nostr VPN Windows shell (Slint). The Rust side owns all state and pushes
+// display-ready values into the `App` global; callbacks dispatch typed core
+// actions. Text content mirrors the WPF shell for parity.
+
+import { Button, CheckBox, ComboBox, LineEdit, ListView, ScrollView, Switch,
+         TabWidget, Spinner, AboutSlint, Palette } from "std-widgets.slint";
+
+export { NostrVpnTray } from "tray.slint";
+
+export global Theme {
+    out property <bool> dark: App.theme-pref == 2
+        || (App.theme-pref == 0 && Palette.color-scheme == ColorScheme.dark);
+    out property <color> window-bg: self.dark ? #14171c : #f5f7fa;
+    out property <color> sidebar-bg: self.dark ? #10131a : #e9edf3;
+    out property <color> card-bg: self.dark ? #1b2029 : #ffffff;
+    out property <color> panel-bg: self.dark ? #232a35 : #f0f3f7;
+    out property <color> line: self.dark ? #2c3441 : #dde3ea;
+    out property <color> text-primary: self.dark ? #e8ecf1 : #1c2430;
+    out property <color> text-secondary: self.dark ? #98a4b3 : #5b6875;
+    out property <color> accent: self.dark ? #7ab8ff : #2563eb;
+    out property <color> accent-soft: self.dark ? #21304a : #e3edff;
+    out property <color> ok: self.dark ? #57d9a3 : #16803c;
+    out property <color> warn: self.dark ? #e8b45a : #b45309;
+    out property <color> danger: self.dark ? #f87171 : #dc2626;
+    out property <color> banner-bg: self.dark ? #26314a : #eaf1fd;
+}
+
+export struct NetworkRow {
+    id: string,
+    name: string,
+    enabled: bool,
+}
+
+export struct ParticipantRow {
+    key: string,
+    npub: string,
+    display-name: string,
+    tunnel-ip: string,
+    connectivity: string,
+    is-self: bool,
+    is-admin: bool,
+    offers-exit: bool,
+    is-fips-routed: bool,
+}
+
+export struct ParticipantDetail {
+    display-name: string,
+    connectivity: string,
+    is-self: bool,
+    is-admin: bool,
+    offers-exit: bool,
+    is-fips-direct: bool,
+    is-fips-routed: bool,
+    role-text: string,
+    fips-path-text: string,
+    last-seen: string,
+    srtt-age: string,
+    control-seen: string,
+    data-seen: string,
+    tx: string,
+    rx: string,
+    magic-dns: string,
+    tunnel-ip: string,
+    npub: string,
+    hints-text: string,
+    status-detail: string,
+}
+
+export struct ExitRow {
+    npub: string,
+    name: string,
+    status: string,
+}
+
+export struct AutoRateRow {
+    seller: string,
+    up-text: string,
+    down-text: string,
+}
+
+export struct OfferRow {
+    key: string,
+    seller: string,
+    personal-rating: int,
+    country: string,
+    price: string,
+    rating: string,
+    status: string,
+    metric: string,
+    can-rate: bool,
+    can-use: bool,
+    up-text: string,
+    down-text: string,
+}
+
+export struct SessionRow {
+    session-id: string,
+    seller: string,
+    personal-rating: int,
+    title: string,
+    detail: string,
+    location: string,
+    paid: string,
+    behind: string,
+    metric: string,
+    settlement: string,
+    can-rate: bool,
+    can-use: bool,
+    can-open: bool,
+    can-pay: bool,
+    can-settle: bool,
+    up-text: string,
+    down-text: string,
+}
+
+export struct CustomerRow {
+    title: string,
+    detail: string,
+    paid: string,
+    behind: string,
+    metric: string,
+    settlement: string,
+}
+
+export struct RelayRow {
+    url: string,
+    enabled: bool,
+    connected: bool,
+}
+
+export struct HealthRow {
+    severity: string,
+    summary: string,
+    detail: string,
+}
+
+export struct DiagRow {
+    label: string,
+    value: string,
+}
+
+export global App {
+    // Pages: 0 Devices, 1 AddNetwork, 2 AddDevice, 3 Internet, 4 PublicExits,
+    // 5 Wallet, 6 SellAccess, 7 Settings.
+    in-out property <int> page;
+    in property <bool> market-visible;
+    in property <bool> seller-visible;
+    in property <bool> has-active-network;
+    in property <string> wallet-nav-text;
+    in property <bool> add-device-enabled;
+
+    in-out property <string> notice;
+    in property <bool> notice-visible;
+    in property <bool> action-in-flight;
+
+    // Header
+    in property <string> network-name;
+    in property <bool> network-dot-visible;
+    in property <bool> network-dot-ok;
+    in property <string> vpn-status-text;
+    in property <bool> vpn-status-danger;
+    in property <bool> vpn-on;
+    in property <string> vpn-button-text;
+    in property <bool> vpn-button-enabled;
+    in property <string> hero-subtitle;
+
+    // Update stripe
+    in property <bool> update-visible;
+    in property <string> update-stripe-text;
+    in property <bool> update-install-enabled;
+    in-out property <bool> auto-install-updates;
+    in property <string> update-status;
+
+    // Network switcher
+    in property <[NetworkRow]> networks;
+    in property <bool> show-network-dot;
+
+    // Setup (no network yet)
+    in-out property <int> setup-mode; // 0 choices, 1 create, 2 join
+    in-out property <string> new-network-name;
+    in property <string> active-network-id;
+    in property <bool> show-join-qr;
+    in property <image> join-qr;
+    in property <string> join-request-link;
+    in property <string> own-npub;
+    in-out property <string> manual-join-admin;
+    in-out property <string> manual-join-mesh;
+    in property <bool> manual-join-invalid;
+    in property <bool> manual-join-can-submit;
+
+    // Devices page
+    in property <[ParticipantRow]> participants;
+    in-out property <string> selected-participant;
+    in property <bool> has-participants;
+    in property <ParticipantDetail> detail;
+    in property <bool> can-rename-participant;
+    in property <bool> can-manage-participant;
+    in-out property <string> alias-input;
+    in-out property <string> hints-input;
+
+    // Add device page
+    in-out property <string> join-request-input;
+    in property <bool> join-input-invalid;
+    in property <bool> admin-mode;
+    in property <string> admin-network-id;
+    in-out property <string> participant-input;
+    in-out property <string> participant-alias-input;
+    in property <bool> participant-input-invalid;
+    in property <bool> can-add-participant;
+
+    // Internet page
+    in property <string> internet-status;
+    in property <bool> direct-selected;
+    in property <bool> wg-selected;
+    in property <bool> wg-configured;
+    in property <string> wg-subtitle;
+    in property <bool> paid-auto-selected;
+    in property <bool> paid-manual-selected;
+    in property <bool> has-auto-session;
+    in property <AutoRateRow> auto-session;
+    in property <[ExitRow]> peer-exits;
+    in property <bool> advertise-exit;
+    in property <bool> leak-protection;
+    in-out property <string> wg-config;
+    in-out property <string> dns-mode;
+    in-out property <string> dns-provider;
+    in-out property <string> dns-custom-url;
+    in-out property <string> dns-bootstrap;
+    in-out property <string> dns-through;
+    in property <bool> dns-encrypted-selected;
+    in property <bool> dns-custom-selected;
+    in property <bool> dns-through-selected;
+
+    // Public exits page
+    in property <string> market-status;
+    in property <string> wallet-balance-short;
+    in property <string> hidden-offers-text;
+    in-out property <string> manual-provider;
+    in property <string> manual-provider-status;
+    in property <bool> manual-provider-set;
+    in property <bool> can-add-provider;
+    in-out property <string> filter-country;
+    in-out property <string> filter-sort;
+    in-out property <bool> filter-v4;
+    in-out property <bool> filter-v6;
+    in property <[OfferRow]> offers;
+    in property <[SessionRow]> sessions;
+    in property <string> last-payment-status;
+    in property <bool> can-send-envelope;
+    in property <bool> has-streamable-payments;
+
+    // Wallet page
+    in property <string> wallet-balance;
+    in property <string> wallet-secondary-balance;
+    in property <string> wallet-rate-text;
+    in property <string> wallet-action-status;
+    in-out property <string> mint-url;
+    in property <bool> can-add-mint;
+    in property <bool> has-mint;
+    in-out property <string> topup-amount;
+    in property <bool> can-topup;
+    in-out property <string> send-amount;
+    in property <bool> can-send-token;
+    in-out property <string> receive-token;
+    in property <bool> can-receive-token;
+    in-out property <string> withdraw-invoice;
+    in property <bool> can-withdraw;    in property <bool> invoice-visible;
+    in property <image> invoice-qr;
+    in property <string> invoice-expiry;
+    in property <string> invoice-request;
+    in property <bool> token-visible;
+    in property <string> token-text;
+    in property <bool> preimage-visible;
+    in property <string> preimage-text;
+    in property <[string]> mints;
+
+    // Sell access page
+    in property <bool> seller-enabled;
+    in property <string> seller-status;
+    in property <string> credit-text;
+    in property <string> credit-help;
+    in property <bool> has-credit-help;
+    in property <string> payment-status;
+    in property <bool> has-payment-status;
+    in property <string> seller-summary;
+    in-out property <string> seller-price;
+    in property <bool> can-save-price;
+    in property <string> seller-provider-link;
+    in property <bool> has-provider-link;
+    in property <string> trial-text;
+    in property <string> expiry-text;
+    in property <string> seller-settlement;
+    in property <bool> has-seller-settlement;
+    in property <string> public-ip-text;
+    in property <bool> has-public-ip;
+    in property <string> mints-text;
+    in property <string> seller-sessions-text;
+    in property <[CustomerRow]> customers;
+
+    // Settings page
+    in-out property <string> node-name;
+    in-out property <string> endpoint;
+    in-out property <string> tunnel-ip;
+    in-out property <string> listen-port;
+    in-out property <bool> autoconnect;
+    in-out property <bool> launch-startup;
+    in-out property <bool> close-tray;
+    in-out property <int> theme-pref; // 0 system, 1 light, 2 dark
+    in-out property <bool> fiat-enabled;
+    in-out property <string> fiat-currency;
+    in-out property <string> relay-input;
+    in property <[RelayRow]> relays;
+    in-out property <bool> fips-non-roster;
+    in-out property <bool> fips-nostr-discovery;
+    in-out property <bool> fips-bootstrap;
+    in-out property <bool> fips-host-tunnel;
+    in property <string> fips-address;
+    in-out property <string> fips-ports;
+    in-out property <string> network-name-draft;
+    in-out property <string> network-mesh-draft;
+    in property <bool> can-save-network-name;
+    in property <bool> can-save-mesh;
+    in property <[NetworkRow]> inactive-networks;
+    in property <string> service-summary;
+    in property <string> cli-summary;
+    in property <string> system-version-label;
+    in property <bool> service-supported;
+    in property <bool> service-enablement-supported;
+    in property <bool> cli-install-supported;
+    in property <[DiagRow]> diagnostics;
+    in property <[HealthRow]> health;
+    in-out property <bool> diagnostics-open;
+
+    // Navigation and shared
+    callback request-page(int);
+    callback toggle-vpn();
+    callback refresh-now();
+    callback copy-text(string);
+    callback open-url(string);
+    callback select-shown-network(string);
+    callback goto-add-network();
+    callback request-about();
+
+    // Setup
+    callback setup-create();
+    callback setup-join();
+    callback setup-back();
+    callback create-network();
+    callback manual-add-network();
+    callback import-join-qr-file();
+
+    // Devices
+    callback select-participant(string);
+    callback save-alias();
+    callback toggle-participant-admin();
+    callback remove-participant();
+    callback save-hints();
+
+    // Add device
+    callback join-input-edited(string);
+    callback add-participant();
+
+    // Internet
+    callback select-direct-exit();
+    callback select-wireguard-exit();
+    callback select-paid-auto-exit();
+    callback select-paid-manual-exit();
+    callback select-peer-exit(string);
+    callback rate-exit(string, int);
+    callback reselect-paid-exit();
+    callback set-advertise-exit(bool);
+    callback set-leak-protection(bool);
+    callback import-wg-file();
+    callback save-wg-config();
+    callback save-exit-dns();
+
+    // Public exits
+    callback discover-offers();
+    callback stream-payments();
+    callback set-manual-provider();
+    callback clear-manual-provider();
+    callback filter-editing();
+    callback apply-filter();
+    callback clear-filter();
+    callback send-envelope();
+    callback buy-offer(string);
+    callback use-session(string);
+    callback probe-session(string);
+    callback fund-session(string);
+    callback pay-session(string);
+    callback settle-session(string);
+
+    // Wallet
+    callback refresh-wallet();
+    callback add-mint();
+    callback topup-wallet();
+    callback send-token();
+    callback redeem-token();
+    callback pay-invoice();
+    callback scan-token-qr();
+
+    // Sell
+    callback set-seller-enabled(bool);
+    callback save-seller-price();
+
+    // Settings
+    callback save-node();
+    callback add-relay();
+    callback set-relay-enabled(string, bool);
+    callback remove-relay(string);
+    callback set-autoconnect(bool);
+    callback set-launch-startup(bool);
+    callback set-close-tray(bool);
+    callback set-theme(int);
+    callback set-fiat-enabled(bool);
+    callback set-fiat-currency(string);
+    callback set-fips-host-tunnel(bool);
+    callback set-fips-non-roster(bool);
+    callback set-fips-nostr-discovery(bool);
+    callback set-fips-bootstrap(bool);
+    callback rename-network();
+    callback save-mesh-id();
+    callback remove-network(string);
+    callback activate-network(string);
+    callback install-service();
+    callback enable-service();
+    callback disable-service();
+    callback install-cli();
+    callback check-updates();
+    callback install-update();
+    callback set-auto-install(bool);
+}
+
+component Card inherits Rectangle {
+    background: Theme.card-bg;
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: Theme.line;
+    VerticalLayout {
+        padding: 16px;
+        spacing: 8px;
+        @children
+    }
+}
+
+component H1 inherits Text {
+    color: Theme.text-primary;
+    font-size: 26px;
+    font-weight: 700;
+    vertical-alignment: center;
+}
+
+component H2 inherits Text {
+    color: Theme.text-primary;
+    font-size: 17px;
+    font-weight: 600;
+    vertical-alignment: center;
+}
+
+component Dim inherits Text {
+    color: Theme.text-secondary;
+    wrap: word-wrap;
+    font-size: 13px;
+    vertical-alignment: center;
+}
+
+component Field inherits LineEdit {
+    horizontal-stretch: 1;
+}
+
+component RowLabel inherits Text {
+    color: Theme.text-secondary;
+    vertical-alignment: center;
+    font-size: 13px;
+}
+
+component Dot inherits Rectangle {
+    width: 9px;
+    height: 9px;
+    border-radius: 5px;
+    in property <bool> ok;
+    background: ok ? Theme.ok : Theme.text-secondary;
+}
+
+component SwitchRow inherits HorizontalLayout {
+    in property <string> label;
+    in-out property <bool> checked <=> sw.checked;
+    callback changed(bool);
+    spacing: 8px;
+    sw := Switch {
+        toggled => { root.changed(self.checked); }
+    }
+    Dim {
+        text: root.label;
+        horizontal-stretch: 1;
+    }
+}
+
+component RatingButtons inherits HorizontalLayout {
+    in property <string> up-text;
+    in property <string> down-text;
+    in property <bool> can-rate;
+    in property <string> seller;
+    spacing: 6px;
+    Button {
+        enabled: root.can-rate;
+        text: root.up-text;
+        clicked => { App.rate-exit(root.seller, 1); }
+    }
+    Button {
+        enabled: root.can-rate;
+        text: root.down-text;
+        clicked => { App.rate-exit(root.seller, -1); }
+    }
+}
+
+component SetupView inherits VerticalLayout {
+    spacing: 12px;
+    if App.setup-mode == 0 : Card {
+        VerticalLayout {
+            spacing: 8px;
+            Button {
+                text: "Create Network";
+                clicked => { App.setup-create(); }
+            }
+            Button {
+                text: "Join Network";
+                clicked => { App.setup-join(); }
+            }
+        }
+    }
+    if App.setup-mode == 1 : Card {
+        VerticalLayout {
+            spacing: 10px;
+            Button {
+                text: "Back";
+                clicked => { App.setup-back(); }
+            }
+            H2 { text: "Create Network"; }
+            HorizontalLayout {
+                spacing: 8px;
+                Field {
+                    text <=> App.new-network-name;
+                }
+                Button {
+                    text: "Create";
+                    primary: true;
+                    clicked => { App.create-network(); }
+                }
+            }
+        }
+    }
+    if App.setup-mode == 2 : Card {
+        VerticalLayout {
+            spacing: 10px;
+            Button {
+                text: "Back";
+                clicked => { App.setup-back(); }
+            }
+            H2 { text: "Join Network"; }
+            if App.show-join-qr : VerticalLayout {
+                spacing: 8px;
+                Image {
+                    source: App.join-qr;
+                    image-rendering: pixelated;
+                    preferred-height: 200px;
+                }
+                Button {
+                    text: "Copy Request";
+                    clicked => { App.copy-text(App.join-request-link); }
+                }
+            }
+            Card {
+                VerticalLayout {
+                    spacing: 6px;
+                    H2 { text: "Manual join"; }
+                    Dim {
+                        text: "Give the admin your Device ID. Enter their Device ID and Network ID here; they must add your Device ID too.";
+                    }
+                    Text {
+                        text: App.own-npub;
+                        color: Theme.text-primary;
+                        wrap: word-wrap;
+                        font-size: 12px;
+                    }
+                    Button {
+                        text: "Copy my Device ID";
+                        clicked => { App.copy-text(App.own-npub); }
+                    }
+                    Field {
+                        text <=> App.manual-join-admin;
+                        placeholder-text: "Admin Device ID";
+                    }
+                    if App.manual-join-invalid : Text {
+                        text: "Not a valid device ID";
+                        color: Theme.danger;
+                        font-size: 11px;
+                    }
+                    Field {
+                        text <=> App.manual-join-mesh;
+                        placeholder-text: "Network ID";
+                    }
+                    Button {
+                        text: "Add manually";
+                        enabled: App.manual-join-can-submit;
+                        clicked => { App.manual-add-network(); }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// All pages once a network exists.
+component DevicesPage inherits HorizontalLayout {
+    spacing: 14px;
+    // Device list
+    Card {
+        width: 330px;
+        VerticalLayout {
+            spacing: 10px;
+            HorizontalLayout {
+                spacing: 8px;
+                VerticalLayout {
+                    spacing: 2px;
+                    H2 { text: "Devices"; }
+                    Text {
+                        text: App.hero-subtitle;
+                        color: Theme.text-secondary;
+                        font-size: 12px;
+                    }
+                }
+                Rectangle { horizontal-stretch: 1; }
+                if App.detail.is-admin : Button {
+                    text: "+ Add device";
+                    enabled: App.add-device-enabled;
+                    clicked => { App.request-page(2); }
+                }
+            }
+            ListView {
+                vertical-stretch: 1;
+                for participant in App.participants : Rectangle {
+                    height: 62px;
+                    background: App.selected-participant == participant.key ? Theme.accent-soft : transparent;
+                    border-radius: 8px;
+                    border-width: App.selected-participant == participant.key ? 1px : 0px;
+                    border-color: Theme.accent;
+                    // Row click target sits below the row content so the Copy
+                    // button stays clickable.
+                    TouchArea {
+                        clicked => { App.select-participant(participant.key); }
+                    }
+                    HorizontalLayout {
+                        padding: 10px;
+                        spacing: 8px;
+                        VerticalLayout {
+                            alignment: center;
+                            Dot {
+                                ok: participant.connectivity == "Online";
+                            }
+                        }
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            spacing: 3px;
+                            HorizontalLayout {
+                                spacing: 6px;
+                                Text {
+                                    text: participant.display-name;
+                                    color: Theme.text-primary;
+                                    font-weight: 600;
+                                    overflow: elide;
+                                    horizontal-stretch: 1;
+                                }
+                                if participant.is-self : Text {
+                                    text: "This device";
+                                    color: Theme.ok;
+                                    font-size: 11px;
+                                    vertical-alignment: center;
+                                }
+                                if participant.is-admin : Text {
+                                    text: "Admin";
+                                    color: Theme.accent;
+                                    font-size: 11px;
+                                    vertical-alignment: center;
+                                }
+                                if participant.offers-exit : Text {
+                                    text: "Exit";
+                                    color: Theme.warn;
+                                    font-size: 11px;
+                                    vertical-alignment: center;
+                                }
+                                if participant.is-fips-routed : Text {
+                                    text: "via mesh";
+                                    color: Theme.text-secondary;
+                                    font-size: 11px;
+                                    vertical-alignment: center;
+                                }
+                            }
+                            Text {
+                                text: participant.tunnel-ip + "  " + participant.connectivity;
+                                color: Theme.text-secondary;
+                                font-size: 12px;
+                                overflow: elide;
+                            }
+                        }
+                        Button {
+                            text: "Copy";
+                            clicked => { App.copy-text(participant.npub); }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Device detail
+    Card {
+        VerticalLayout {
+            spacing: 8px;
+            if App.has-participants : VerticalLayout {
+                spacing: 8px;
+                HorizontalLayout {
+                    spacing: 8px;
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 6px;
+                        Text {
+                            text: App.detail.display-name;
+                            color: Theme.text-primary;
+                            font-size: 21px;
+                            font-weight: 600;
+                            wrap: word-wrap;
+                        }
+                        HorizontalLayout {
+                            spacing: 8px;
+                            if App.detail.is-self : Text { text: "This device"; color: Theme.ok; font-size: 12px; vertical-alignment: center; }
+                            if App.detail.is-admin : Text { text: "Admin"; color: Theme.accent; font-size: 12px; vertical-alignment: center; }
+                            if App.detail.offers-exit : Text { text: "Exit"; color: Theme.warn; font-size: 12px; vertical-alignment: center; }
+                            if App.detail.is-fips-direct : Text { text: "direct connection"; color: Theme.ok; font-size: 12px; vertical-alignment: center; }
+                            if App.detail.is-fips-routed : Text { text: "via mesh"; color: Theme.text-secondary; font-size: 12px; vertical-alignment: center; }
+                        }
+                    }
+                    HorizontalLayout {
+                        spacing: 6px;
+                        Text {
+                            text: App.detail.connectivity;
+                            color: Theme.text-secondary;
+                            vertical-alignment: center;
+                            font-size: 12px;
+                        }
+                    }
+                }
+
+                if App.can-rename-participant : HorizontalLayout {
+                    spacing: 8px;
+                    RowLabel { text: "Name"; width: 70px; }
+                    Field { text <=> App.alias-input; }
+                    Button { text: "Save"; clicked => { App.save-alias(); } }
+                    if App.can-manage-participant : Button { text: "Admin"; clicked => { App.toggle-participant-admin(); } }
+                    if App.can-manage-participant : Button { text: "Remove"; clicked => { App.remove-participant(); } }
+                }
+                if App.can-manage-participant : HorizontalLayout {
+                    spacing: 8px;
+                    RowLabel { text: "Hints"; width: 70px; }
+                    Field { text <=> App.hints-input; placeholder-text: "host or host:port"; }
+                    Button { text: "Save"; clicked => { App.save-hints(); } }
+                }
+
+                Rectangle { height: 1px; background: Theme.line; }
+                H2 { text: "Addresses"; }
+                HorizontalLayout {
+                    spacing: 8px;
+                    RowLabel { text: "MagicDNS"; width: 100px; }
+                    Text { text: App.detail.magic-dns; color: Theme.text-primary; overflow: elide; }
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    RowLabel { text: "VPN IP"; width: 100px; }
+                    Text { text: App.detail.tunnel-ip; color: Theme.text-primary; overflow: elide; }
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    RowLabel { text: "Device ID"; width: 100px; }
+                    Text {
+                        text: App.detail.npub;
+                        color: Theme.text-primary;
+                        wrap: word-wrap;
+                        font-size: 12px;
+                        horizontal-stretch: 1;
+                    }
+                    Button { text: "Copy"; clicked => { App.copy-text(App.detail.npub); } }
+                }
+
+                Rectangle { height: 1px; background: Theme.line; }
+                H2 { text: "Connectivity"; }
+                GridLayout {
+                    spacing: 8px;
+                    Row {
+                        VerticalLayout { spacing: 2px; Text { text: "Role"; color: Theme.text-secondary; font-size: 11px; } Text { text: App.detail.role-text; color: Theme.text-primary; font-size: 13px; overflow: elide; } }
+                        VerticalLayout { spacing: 2px; Text { text: "State"; color: Theme.text-secondary; font-size: 11px; } Text { text: App.detail.connectivity; color: Theme.text-primary; font-size: 13px; overflow: elide; } }
+                        VerticalLayout { spacing: 2px; Text { text: "FIPS path"; color: Theme.text-secondary; font-size: 11px; } Text { text: App.detail.fips-path-text; color: Theme.text-primary; font-size: 13px; overflow: elide; } }
+                    }
+                    Row {
+                        VerticalLayout { spacing: 2px; Text { text: "Last seen"; color: Theme.text-secondary; font-size: 11px; } Text { text: App.detail.last-seen; color: Theme.text-primary; font-size: 13px; overflow: elide; } }
+                        VerticalLayout { spacing: 2px; Text { text: "Latency age"; color: Theme.text-secondary; font-size: 11px; } Text { text: App.detail.srtt-age; color: Theme.text-primary; font-size: 13px; overflow: elide; } }
+                        VerticalLayout { spacing: 2px; Text { text: "Control seen"; color: Theme.text-secondary; font-size: 11px; } Text { text: App.detail.control-seen; color: Theme.text-primary; font-size: 13px; overflow: elide; } }
+                    }
+                    Row {
+                        VerticalLayout { spacing: 2px; Text { text: "Data seen"; color: Theme.text-secondary; font-size: 11px; } Text { text: App.detail.data-seen; color: Theme.text-primary; font-size: 13px; overflow: elide; } }
+                        VerticalLayout { spacing: 2px; Text { text: "Sent"; color: Theme.text-secondary; font-size: 11px; } Text { text: App.detail.tx; color: Theme.text-primary; font-size: 13px; overflow: elide; } }
+                        VerticalLayout { spacing: 2px; Text { text: "Received"; color: Theme.text-secondary; font-size: 11px; } Text { text: App.detail.rx; color: Theme.text-primary; font-size: 13px; overflow: elide; } }
+                    }
+                }
+                VerticalLayout {
+                    spacing: 2px;
+                    Text { text: "Address hints"; color: Theme.text-secondary; font-size: 11px; }
+                    Text { text: App.detail.hints-text; color: Theme.text-primary; font-size: 13px; overflow: elide; }
+                }
+                Dim { text: App.detail.status-detail; }
+            }
+            if !App.has-participants : VerticalLayout {
+                spacing: 8px;
+                H1 { text: "Devices"; font-size: 21px; }
+                Dim { text: "No devices yet"; }
+            }
+        }
+    }
+}
+
+component AddDevicePage inherits VerticalLayout {
+    spacing: 12px;
+    if App.detail.is-admin : Card {
+        VerticalLayout {
+            spacing: 8px;
+            H2 { text: "Link Device"; }
+            Dim {
+                text: "Paste the joiner's request to open confirmation automatically, or add their Device ID below.";
+            }
+            Field {
+                text <=> App.join-request-input;
+                edited(value) => { App.join-input-edited(value); }
+            }
+            if App.join-input-invalid : Text {
+                text: "Not a valid device ID";
+                color: Theme.danger;
+                font-size: 11px;
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                Button {
+                    text: "Import join request QR file";
+                    clicked => { App.import-join-qr-file(); }
+                }
+            }
+        }
+    }
+    if App.admin-mode : Card {
+        VerticalLayout {
+            spacing: 8px;
+            H2 { text: "For manual join"; }
+            Dim { text: "Share your Device ID and Network ID, then add the joining Device ID below."; }
+            Text {
+                text: App.own-npub;
+                color: Theme.text-primary;
+                wrap: word-wrap;
+                font-size: 12px;
+            }
+            Text {
+                text: App.admin-network-id;
+                color: Theme.text-primary;
+                wrap: word-wrap;
+                font-size: 12px;
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                Button { text: "Copy admin Device ID"; clicked => { App.copy-text(App.own-npub); } }
+                Button { text: "Copy Network ID"; clicked => { App.copy-text(App.admin-network-id); } }
+            }
+            Field {
+                text <=> App.participant-input;
+                placeholder-text: "Joining Device ID";
+            }
+            if App.participant-input-invalid : Text {
+                text: "Not a valid device ID";
+                color: Theme.danger;
+                font-size: 11px;
+            }
+            Field {
+                text <=> App.participant-alias-input;
+                placeholder-text: "Name";
+            }
+            Button {
+                text: "Add by Device ID";
+                enabled: App.can-add-participant;
+                clicked => { App.add-participant(); }
+            }
+        }
+    }
+}
+
+component InternetPage inherits VerticalLayout {
+    spacing: 12px;
+    Card {
+        VerticalLayout {
+            spacing: 8px;
+            H2 { text: "Internet Source"; }
+            Dim { text: App.internet-status; }
+            Button {
+                text: (App.direct-selected ? "● " : "○ ") + "This device";
+                clicked => { App.select-direct-exit(); }
+            }
+            Button {
+                text: (App.wg-selected ? "● " : "○ ") + "WireGuard upstream";
+                enabled: App.wg-configured;
+                clicked => { App.select-wireguard-exit(); }
+            }
+            if App.market-visible : Button {
+                text: (App.paid-auto-selected ? "● " : "○ ") + "Paid · Automatic · Experimental";
+                clicked => { App.select-paid-auto-exit(); }
+            }
+            if App.has-auto-session : HorizontalLayout {
+                spacing: 8px;
+                RatingButtons {
+                    up-text: App.auto-session.up-text;
+                    down-text: App.auto-session.down-text;
+                    can-rate: true;
+                    seller: App.auto-session.seller;
+                }
+                Button {
+                    text: "Try another";
+                    clicked => { App.reselect-paid-exit(); }
+                }
+            }
+            if App.market-visible : Button {
+                text: (App.paid-manual-selected ? "● " : "○ ") + "Paid · Choose manually";
+                clicked => { App.select-paid-manual-exit(); }
+            }
+            for exit in App.peer-exits : Button {
+                text: exit.name;
+                clicked => { App.select-peer-exit(exit.npub); }
+            }
+        }
+    }
+    Card {
+        VerticalLayout {
+            spacing: 8px;
+            SwitchRow {
+                label: "Share this device's internet";
+                checked: App.advertise-exit;
+                changed(value) => { App.set-advertise-exit(value); }
+            }
+            SwitchRow {
+                label: "Block internet if source disconnects";
+                checked: App.leak-protection;
+                changed(value) => { App.set-leak-protection(value); }
+            }
+            if App.seller-visible : Button {
+                text: "Sell internet access · Experimental";
+                clicked => { App.request-page(6); }
+            }
+        }
+    }
+    Card {
+        VerticalLayout {
+            spacing: 8px;
+            H2 { text: "WireGuard Upstream"; }
+            Dim { text: "Paste a WireGuard config from an upstream VPN provider such as Mullvad or Proton VPN."; }
+            LineEdit {
+                text <=> App.wg-config;
+                horizontal-stretch: 1;
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                Button { text: "Import File"; clicked => { App.import-wg-file(); } }
+                Button { text: "Save WireGuard"; clicked => { App.save-wg-config(); } }
+            }
+        }
+    }
+    Card {
+        VerticalLayout {
+            spacing: 8px;
+            H2 { text: "Exit DNS"; }
+            Dim { text: "MagicDNS stays local. Public DNS follows this policy while an internet exit is active."; }
+            RowLabel { text: "Mode"; }
+            ComboBox {
+                width: 260px;
+                model: ["Automatic (recommended)", "Encrypted DNS", "DNS through exit"];
+                current-value: App.dns-mode == "encrypted" ? "Encrypted DNS" : App.dns-mode == "through_exit" ? "DNS through exit" : "Automatic (recommended)";
+                selected(value) => {
+                    if value == "Encrypted DNS" { App.dns-mode = "encrypted"; }
+                    if value == "DNS through exit" { App.dns-mode = "through_exit"; }
+                    if value == "Automatic (recommended)" { App.dns-mode = "automatic"; }
+                }
+            }
+            if App.dns-encrypted-selected : VerticalLayout {
+                spacing: 6px;
+                RowLabel { text: "Provider"; }
+                ComboBox {
+                    width: 260px;
+                    model: ["Cloudflare", "Quad9", "Custom DoH"];
+                    current-value: App.dns-provider == "quad9" ? "Quad9" : App.dns-provider == "custom" ? "Custom DoH" : "Cloudflare";
+                    selected(value) => {
+                        if value == "Quad9" { App.dns-provider = "quad9"; }
+                        if value == "Custom DoH" { App.dns-provider = "custom"; }
+                        if value == "Cloudflare" { App.dns-provider = "cloudflare"; }
+                    }
+                }
+                if App.dns-custom-selected : VerticalLayout {
+                    spacing: 6px;
+                    Field { text <=> App.dns-custom-url; placeholder-text: "HTTPS DoH URL"; }
+                    Field { text <=> App.dns-bootstrap; placeholder-text: "Bootstrap IPs, comma separated"; }
+                }
+            }
+            if App.dns-through-selected : VerticalLayout {
+                spacing: 6px;
+                Field { text <=> App.dns-through; placeholder-text: "DNS server IPs, comma separated"; }
+                Dim { text: "These DNS packets are sent only through the selected exit."; }
+            }
+            Dim { text: "Automatic uses profile DNS when supplied; otherwise built-in encrypted DNS."; }
+            Button {
+                text: "Save Exit DNS";
+                clicked => { App.save-exit-dns(); }
+            }
+        }
+    }
+}
+
+component PublicExitsPage inherits VerticalLayout {
+    spacing: 12px;
+    Dim { text: App.internet-status; }
+    Card {
+        VerticalLayout {
+            spacing: 8px;
+            HorizontalLayout {
+                spacing: 8px;
+                VerticalLayout {
+                    spacing: 2px;
+                    horizontal-stretch: 1;
+                    H2 { text: "Find Internet to Buy"; }
+                    Dim { text: "Experimental"; }
+                    Dim { text: "Wallet " + App.wallet-balance-short; }
+                }
+                Button { text: "Find"; clicked => { App.discover-offers(); } }
+                Button {
+                    text: "Pay";
+                    enabled: App.has-streamable-payments;
+                    clicked => { App.stream-payments(); }
+                }
+            }
+            Dim { text: App.internet-status; }
+            Dim { text: App.market-status; }
+            HorizontalLayout {
+                spacing: 8px;
+                Field {
+                    text <=> App.manual-provider;
+                    placeholder-text: "Provider npub or paid exit link";
+                }
+                Button {
+                    text: "Add provider";
+                    enabled: App.can-add-provider;
+                    clicked => { App.set-manual-provider(); }
+                }
+                if App.manual-provider-set : Button {
+                    text: "Clear";
+                    clicked => { App.clear-manual-provider(); }
+                }
+            }
+            if App.manual-provider-status != "" : Dim { text: App.manual-provider-status; }
+            HorizontalLayout {
+                spacing: 8px;
+                Field {
+                    text <=> App.filter-country;
+                    placeholder-text: "Country";
+                    width: 80px;
+                    edited => { App.filter-editing(); }
+                }
+                ComboBox {
+                    width: 140px;
+                    model: ["Quality", "Price", "Newest"];
+                    current-value: App.filter-sort == "price" ? "Price" : App.filter-sort == "newest" ? "Newest" : "Quality";
+                    selected(value) => {
+                        App.filter-editing();
+                        if value == "Price" { App.filter-sort = "price"; }
+                        if value == "Newest" { App.filter-sort = "newest"; }
+                        if value == "Quality" { App.filter-sort = "quality"; }
+                    }
+                }
+                CheckBox {
+                    text: "IPv4";
+                    checked <=> App.filter-v4;
+                    toggled => { App.filter-editing(); }
+                }
+                CheckBox {
+                    text: "IPv6";
+                    checked <=> App.filter-v6;
+                    toggled => { App.filter-editing(); }
+                }
+                Rectangle { horizontal-stretch: 1; }
+                Button { text: "Clear filters"; clicked => { App.clear-filter(); } }
+                Button { text: "Apply"; clicked => { App.apply-filter(); } }
+            }
+            if App.hidden-offers-text != "" : Dim { text: App.hidden-offers-text; }
+            if App.last-payment-status != "" : Dim { text: App.last-payment-status; }
+            if App.can-send-envelope : Button {
+                text: "Send payment";
+                clicked => { App.send-envelope(); }
+            }
+            RowLabel { text: "Available"; font-size: 14px; color: Theme.text-primary; }
+            for offer in App.offers : HorizontalLayout {
+                spacing: 8px;
+                VerticalLayout {
+                    horizontal-stretch: 1;
+                    spacing: 2px;
+                    HorizontalLayout {
+                        spacing: 8px;
+                        Text { text: offer.country; color: Theme.text-primary; font-weight: 600; vertical-alignment: center; }
+                        Text { text: offer.price; color: Theme.text-secondary; vertical-alignment: center; }
+                        Text { text: offer.rating; color: Theme.text-secondary; vertical-alignment: center; }
+                    }
+                    Text { text: offer.status; color: Theme.text-secondary; font-size: 12px; overflow: elide; }
+                    if offer.metric != "" : Text { text: offer.metric; color: Theme.text-secondary; font-size: 12px; overflow: elide; }
+                }
+                RatingButtons {
+                    up-text: offer.up-text;
+                    down-text: offer.down-text;
+                    can-rate: offer.can-rate;
+                    seller: offer.seller;
+                }
+                Button {
+                    text: "Connect";
+                    enabled: offer.can-use;
+                    clicked => { App.buy-offer(offer.key); }
+                }
+            }
+            RowLabel { text: "Your Paid Internet"; font-size: 14px; color: Theme.text-primary; }
+            for session in App.sessions : HorizontalLayout {
+                spacing: 8px;
+                VerticalLayout {
+                    horizontal-stretch: 1;
+                    spacing: 2px;
+                    Text { text: session.title; color: Theme.text-primary; font-weight: 600; }
+                    HorizontalLayout {
+                        spacing: 8px;
+                        Text { text: session.detail; color: Theme.text-secondary; font-size: 12px; vertical-alignment: center; }
+                        if session.location != "" : Text { text: session.location; color: Theme.text-secondary; font-size: 12px; vertical-alignment: center; }
+                        Text { text: session.paid; color: Theme.text-secondary; font-size: 12px; vertical-alignment: center; }
+                        if session.behind != "" : Text { text: session.behind; color: Theme.warn; font-size: 12px; vertical-alignment: center; }
+                    }
+                    if session.metric != "" : Text { text: session.metric; color: Theme.text-secondary; font-size: 12px; overflow: elide; }
+                    if session.settlement != "" : Text { text: session.settlement; color: Theme.text-secondary; font-size: 12px; overflow: elide; }
+                }
+                RatingButtons {
+                    up-text: session.up-text;
+                    down-text: session.down-text;
+                    can-rate: session.can-rate;
+                    seller: session.seller;
+                }
+                Button { text: "Connect"; enabled: session.can-use; clicked => { App.use-session(session.session-id); } }
+                Button { text: "Probe"; clicked => { App.probe-session(session.session-id); } }
+                Button { text: "Fund"; enabled: session.can-open; clicked => { App.fund-session(session.session-id); } }
+                Button { text: "Pay"; enabled: session.can-pay; clicked => { App.pay-session(session.session-id); } }
+                Button { text: "Settle"; enabled: session.can-settle; clicked => { App.settle-session(session.session-id); } }
+            }
+        }
+    }
+}
+
+component WalletPage inherits VerticalLayout {
+    spacing: 12px;
+    Dim { text: "Pay for internet access and receive earnings when you sell bandwidth."; }
+    Card {
+        VerticalLayout {
+            spacing: 8px;
+            HorizontalLayout {
+                spacing: 8px;
+                VerticalLayout {
+                    horizontal-stretch: 1;
+                    spacing: 2px;
+                    H2 { text: "Wallet"; }
+                    if App.wallet-balance != "" : Text {
+                        text: App.wallet-balance;
+                        color: Theme.text-primary;
+                        font-size: 30px;
+                        font-weight: 700;
+                    }
+                    if App.wallet-secondary-balance != "" : Dim { text: App.wallet-secondary-balance; }
+                    if App.wallet-rate-text != "" : Dim { text: App.wallet-rate-text; }
+                }
+                Button { text: "Refresh"; clicked => { App.refresh-wallet(); } }
+            }
+            if App.wallet-action-status != "" : Dim { text: App.wallet-action-status; }
+            HorizontalLayout {
+                spacing: 8px;
+                RowLabel { text: "Mint URL"; width: 80px; }
+                Field { text <=> App.mint-url; }
+                Button {
+                    text: "Add";
+                    enabled: App.can-add-mint;
+                    clicked => { App.add-mint(); }
+                }
+            }
+            TabWidget {
+                Tab {
+                    title: "Receive";
+                    VerticalLayout {
+                        padding: 8px;
+                        spacing: 8px;
+                        RowLabel { text: "Lightning"; font-size: 14px; color: Theme.text-primary; }
+                        if !App.has-mint : Dim { text: "Add a mint before using Lightning."; }
+                        HorizontalLayout {
+                            spacing: 8px;
+                            Field { text <=> App.topup-amount; placeholder-text: "Amount in sat"; }
+                            Button {
+                                text: "Create Invoice";
+                                enabled: App.can-topup;
+                                clicked => { App.topup-wallet(); }
+                            }
+                        }
+                        RowLabel { text: "Token"; font-size: 14px; color: Theme.text-primary; }
+                        HorizontalLayout {
+                            spacing: 8px;
+                            Field { text <=> App.receive-token; }
+                            Button {
+                                text: "Import";
+                                enabled: App.can-receive-token;
+                                clicked => { App.redeem-token(); }
+                            }
+                            Button {
+                                text: "Scan QR";
+                                clicked => { App.scan-token-qr(); }
+                            }
+                        }
+                    }
+                }
+                Tab {
+                    title: "Send";
+                    VerticalLayout {
+                        padding: 8px;
+                        spacing: 8px;
+                        RowLabel { text: "Lightning"; font-size: 14px; color: Theme.text-primary; }
+                        if !App.has-mint : Dim { text: "Add a mint before sending."; }
+                        HorizontalLayout {
+                            spacing: 8px;
+                            Field { text <=> App.withdraw-invoice; placeholder-text: "Lightning invoice"; }
+                            Button {
+                                text: "Pay";
+                                enabled: App.can-withdraw;
+                                clicked => { App.pay-invoice(); }
+                            }
+                        }
+                        RowLabel { text: "Token"; font-size: 14px; color: Theme.text-primary; }
+                        HorizontalLayout {
+                            spacing: 8px;
+                            Field { text <=> App.send-amount; placeholder-text: "Amount in sat"; }
+                            Button {
+                                text: "Export";
+                                enabled: App.can-send-token;
+                                clicked => { App.send-token(); }
+                            }
+                        }
+                    }
+                }
+            }
+            if App.invoice-visible : VerticalLayout {
+                spacing: 6px;
+                RowLabel { text: "Invoice"; font-size: 14px; color: Theme.text-primary; }
+                Image {
+                    source: App.invoice-qr;
+                    image-rendering: pixelated;
+                    preferred-height: 200px;
+                }
+                if App.invoice-expiry != "" : Dim { text: App.invoice-expiry; }
+                HorizontalLayout {
+                    spacing: 8px;
+                    Text {
+                        text: App.invoice-request;
+                        color: Theme.text-primary;
+                        font-size: 12px;
+                        wrap: word-wrap;
+                        horizontal-stretch: 1;
+                    }
+                    Button { text: "Copy"; clicked => { App.copy-text(App.invoice-request); } }
+                }
+            }
+            if App.token-visible : VerticalLayout {
+                spacing: 6px;
+                RowLabel { text: "Token"; font-size: 14px; color: Theme.text-primary; }
+                HorizontalLayout {
+                    spacing: 8px;
+                    Text {
+                        text: App.token-text;
+                        color: Theme.text-primary;
+                        font-size: 12px;
+                        wrap: word-wrap;
+                        horizontal-stretch: 1;
+                    }
+                    Button { text: "Copy"; clicked => { App.copy-text(App.token-text); } }
+                }
+            }
+            if App.preimage-visible : VerticalLayout {
+                spacing: 6px;
+                RowLabel { text: "Preimage"; font-size: 14px; color: Theme.text-primary; }
+                HorizontalLayout {
+                    spacing: 8px;
+                    Text {
+                        text: App.preimage-text;
+                        color: Theme.text-primary;
+                        font-size: 12px;
+                        wrap: word-wrap;
+                        horizontal-stretch: 1;
+                    }
+                    Button { text: "Copy"; clicked => { App.copy-text(App.preimage-text); } }
+                }
+            }
+            RowLabel { text: "Mints"; font-size: 14px; color: Theme.text-primary; }
+            for mint in App.mints : Dim { text: mint; }
+        }
+    }
+}
+
+component SellPage inherits VerticalLayout {
+    spacing: 12px;
+    Card {
+        VerticalLayout {
+            spacing: 8px;
+            H2 { text: "Share My Internet"; }
+            Dim { text: App.seller-status; }
+            if App.seller-visible : VerticalLayout {
+                spacing: 8px;
+                SwitchRow {
+                    label: "Share my internet";
+                    checked: App.seller-enabled;
+                    changed(value) => { App.set-seller-enabled(value); }
+                }
+                Dim { text: App.credit-text; }
+                if App.has-credit-help : Dim { text: App.credit-help; }
+                if App.has-payment-status : Dim { text: App.payment-status; }
+                Dim { text: App.seller-summary; }
+                HorizontalLayout {
+                    spacing: 8px;
+                    Field { text <=> App.seller-price; placeholder-text: "Price in msat/GB"; }
+                    RowLabel { text: "msat/GB"; }
+                    Button {
+                        text: "Save price";
+                        enabled: App.can-save-price;
+                        clicked => { App.save-seller-price(); }
+                    }
+                }
+                if App.has-provider-link : HorizontalLayout {
+                    spacing: 8px;
+                    Text {
+                        text: App.seller-provider-link;
+                        color: Theme.text-primary;
+                        font-size: 12px;
+                        wrap: word-wrap;
+                        horizontal-stretch: 1;
+                    }
+                    Button { text: "Copy link"; clicked => { App.copy-text(App.seller-provider-link); } }
+                }
+                Dim { text: App.trial-text; }
+                Dim { text: App.expiry-text; }
+                if App.has-seller-settlement : Dim { text: App.seller-settlement; }
+                if App.has-public-ip : Dim { text: App.public-ip-text; }
+                Dim { text: App.mints-text; }
+                Dim { text: App.seller-sessions-text; }
+                RowLabel { text: "Active Customers"; font-size: 14px; color: Theme.text-primary; }
+                for customer in App.customers : VerticalLayout {
+                    spacing: 2px;
+                    Text { text: customer.title; color: Theme.text-primary; font-weight: 600; }
+                    HorizontalLayout {
+                        spacing: 8px;
+                        Text { text: customer.detail; color: Theme.text-secondary; font-size: 12px; vertical-alignment: center; }
+                        Text { text: customer.paid; color: Theme.text-secondary; font-size: 12px; vertical-alignment: center; }
+                        if customer.behind != "" : Text { text: customer.behind; color: Theme.warn; font-size: 12px; vertical-alignment: center; }
+                    }
+                    if customer.metric != "" : Text { text: customer.metric; color: Theme.text-secondary; font-size: 12px; overflow: elide; }
+                    if customer.settlement != "" : Text { text: customer.settlement; color: Theme.text-secondary; font-size: 12px; overflow: elide; }
+                }
+            }
+        }
+    }
+}
+
+component SettingsPage inherits VerticalLayout {
+    spacing: 12px;
+    Card {
+        VerticalLayout {
+            spacing: 8px;
+            H2 { text: "This Device"; }
+            HorizontalLayout {
+                spacing: 8px;
+                RowLabel { text: "Name"; width: 90px; }
+                Field { text <=> App.node-name; }
+                RowLabel { text: "Tunnel IP"; width: 80px; }
+                Field { text <=> App.tunnel-ip; }
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                RowLabel { text: "Endpoint"; width: 90px; }
+                Field { text <=> App.endpoint; }
+                RowLabel { text: "Listen Port"; width: 80px; }
+                Field { text <=> App.listen-port; }
+            }
+            Button {
+                text: "Save";
+                clicked => { App.save-node(); }
+            }
+        }
+    }
+    Card {
+        VerticalLayout {
+            spacing: 8px;
+            H2 { text: "General"; }
+            SwitchRow {
+                label: "Start VPN automatically";
+                checked <=> App.autoconnect;
+                changed(value) => { App.set-autoconnect(value); }
+            }
+            SwitchRow {
+                label: "Launch on startup";
+                checked <=> App.launch-startup;
+                changed(value) => { App.set-launch-startup(value); }
+            }
+            SwitchRow {
+                label: "Tray on close";
+                checked <=> App.close-tray;
+                changed(value) => { App.set-close-tray(value); }
+            }
+        }
+    }
+    Card {
+        VerticalLayout {
+            spacing: 8px;
+            H2 { text: "Appearance"; }
+            HorizontalLayout {
+                spacing: 12px;
+                CheckBox {
+                    text: "System";
+                    checked: App.theme-pref == 0;
+                    toggled => { if self.checked { App.set-theme(0); } }
+                }
+                CheckBox {
+                    text: "Light";
+                    checked: App.theme-pref == 1;
+                    toggled => { if self.checked { App.set-theme(1); } }
+                }
+                CheckBox {
+                    text: "Dark";
+                    checked: App.theme-pref == 2;
+                    toggled => { if self.checked { App.set-theme(2); } }
+                }
+            }
+        }
+    }
+    if App.market-visible : Card {
+        VerticalLayout {
+            spacing: 8px;
+            H2 { text: "Wallet"; }
+            SwitchRow {
+                label: "Show fiat value";
+                checked <=> App.fiat-enabled;
+                changed(value) => { App.set-fiat-enabled(value); }
+            }
+            if App.fiat-enabled : VerticalLayout {
+                spacing: 6px;
+                Dim { text: "Rates from Coinbase and Kraken"; }
+                ComboBox {
+                    width: 160px;
+                    model: ["USD", "EUR", "GBP", "CAD", "AUD", "JPY", "CHF"];
+                    current-value: App.fiat-currency;
+                    selected(value) => { App.set-fiat-currency(value); }
+                }
+            }
+        }
+    }
+    Card {
+        VerticalLayout {
+            spacing: 8px;
+            H2 { text: "Relays"; }
+            HorizontalLayout {
+                spacing: 8px;
+                Field { text <=> App.relay-input; placeholder-text: "wss://relay.example"; }
+                Button { text: "Add"; clicked => { App.add-relay(); } }
+            }
+            for relay in App.relays : HorizontalLayout {
+                spacing: 8px;
+                VerticalLayout {
+                    alignment: center;
+                    Dot {
+                        ok: relay.connected;
+                    }
+                }
+                Text {
+                    text: relay.url;
+                    color: Theme.text-primary;
+                    font-size: 13px;
+                    overflow: elide;
+                    horizontal-stretch: 1;
+                    vertical-alignment: center;
+                }
+                CheckBox {
+                    text: "Enabled";
+                    checked: relay.enabled;
+                    toggled => { App.set-relay-enabled(relay.url, self.checked); }
+                }
+                Button { text: "Delete"; clicked => { App.remove-relay(relay.url); } }
+            }
+        }
+    }
+    Card {
+        VerticalLayout {
+            spacing: 8px;
+            H2 { text: "FIPS"; }
+            SwitchRow {
+                label: "Connect to non-roster FIPS peers";
+                checked <=> App.fips-non-roster;
+                changed(value) => { App.set-fips-non-roster(value); }
+            }
+            SwitchRow {
+                label: "Find peers over Nostr relays";
+                checked <=> App.fips-nostr-discovery;
+                changed(value) => { App.set-fips-nostr-discovery(value); }
+            }
+            SwitchRow {
+                label: "Use bootstrap servers";
+                checked <=> App.fips-bootstrap;
+                changed(value) => { App.set-fips-bootstrap(value); }
+            }
+        }
+    }
+    Card {
+        VerticalLayout {
+            spacing: 8px;
+            H2 { text: "Public FIPS routing"; }
+            Dim {
+                text: "FIPS gives .fips addresses end-to-end encryption and identity-based routing. Hosts can reach each other without static IPs, domain names, TLS certificates, or NAT port forwarding.";
+            }
+            Button {
+                text: "Learn FIPS";
+                clicked => { App.open-url("https://learn.fips.network/"); }
+            }
+            SwitchRow {
+                label: "Keep npub.fips outside the tunnel";
+                checked <=> App.fips-host-tunnel;
+                changed(value) => { App.set-fips-host-tunnel(value); }
+            }
+            if App.fips-host-tunnel : VerticalLayout {
+                spacing: 6px;
+                HorizontalLayout {
+                    spacing: 8px;
+                    RowLabel { text: "Your public FIPS address"; width: 210px; }
+                    Text { text: App.fips-address; color: Theme.text-primary; overflow: elide; vertical-alignment: center; }
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    RowLabel { text: "Public .fips inbound TCP ports"; width: 210px; }
+                    Field { text <=> App.fips-ports; placeholder-text: "Comma-separated port numbers"; }
+                }
+            }
+        }
+    }
+    Card {
+        VerticalLayout {
+            spacing: 8px;
+            H2 { text: "Networks"; }
+            HorizontalLayout {
+                spacing: 8px;
+                Field { text <=> App.new-network-name; }
+                Button { text: "Add"; clicked => { App.create-network(); } }
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                RowLabel { text: "Active"; width: 110px; }
+                Field { text <=> App.network-name-draft; }
+                Button {
+                    text: "Save";
+                    enabled: App.can-save-network-name;
+                    clicked => { App.rename-network(); }
+                }
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                RowLabel { text: "Network ID"; width: 110px; }
+                Field { text <=> App.network-mesh-draft; }
+                Button { text: "Copy"; clicked => { App.copy-text(App.admin-network-id); } }
+                Button {
+                    text: "Save";
+                    enabled: App.can-save-mesh;
+                    clicked => { App.save-mesh-id(); }
+                }
+            }
+            Button {
+                text: "Remove this network";
+                clicked => { App.remove-network(App.active-network-id); }
+            }
+            for network in App.inactive-networks : HorizontalLayout {
+                spacing: 8px;
+                Text {
+                    text: network.name;
+                    color: Theme.text-primary;
+                    font-weight: 600;
+                    horizontal-stretch: 1;
+                    vertical-alignment: center;
+                }
+                Button { text: "Activate"; clicked => { App.activate-network(network.id); } }
+                Button { text: "Remove"; clicked => { App.remove-network(network.id); } }
+            }
+        }
+    }
+    Card {
+        VerticalLayout {
+            spacing: 8px;
+            HorizontalLayout {
+                H2 { text: "System"; }
+                Rectangle { horizontal-stretch: 1; }
+                if App.system-version-label != "" : Dim { text: App.system-version-label; }
+            }
+            HorizontalLayout {
+                spacing: 16px;
+                Dim { text: App.service-summary; }
+                Dim { text: App.cli-summary; }
+                Dim { text: App.update-status; }
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                if App.service-supported : Button { text: "Install service"; clicked => { App.install-service(); } }
+                if App.service-enablement-supported : Button { text: "Enable"; clicked => { App.enable-service(); } }
+                if App.service-enablement-supported : Button { text: "Disable"; clicked => { App.disable-service(); } }
+                if App.cli-install-supported : Button { text: "Install CLI"; clicked => { App.install-cli(); } }
+                Button { text: "Updates"; clicked => { App.check-updates(); } }
+                Button { text: "About"; clicked => { App.request-about(); } }
+            }
+        }
+    }
+    // Diagnostics
+    Card {
+        VerticalLayout {
+            spacing: 8px;
+            HorizontalLayout {
+                H2 { text: "Diagnostics"; }
+                Rectangle { horizontal-stretch: 1; }
+                Button {
+                    text: App.diagnostics-open ? "Hide" : "Show";
+                    clicked => { App.diagnostics-open = !App.diagnostics-open; }
+                }
+            }
+            if App.diagnostics-open : VerticalLayout {
+                spacing: 6px;
+                for row in App.diagnostics : HorizontalLayout {
+                    spacing: 8px;
+                    RowLabel { text: row.label; width: 130px; }
+                    Text {
+                        text: row.value;
+                        color: Theme.text-primary;
+                        font-size: 13px;
+                        overflow: elide;
+                    }
+                }
+                for issue in App.health : HorizontalLayout {
+                    spacing: 8px;
+                    Text {
+                        text: issue.severity;
+                        color: Theme.warn;
+                        font-weight: 600;
+                        width: 82px;
+                        vertical-alignment: center;
+                    }
+                    VerticalLayout {
+                        spacing: 2px;
+                        Text { text: issue.summary; color: Theme.text-primary; }
+                        Dim { text: issue.detail; }
+                    }
+                }
+            }
+        }
+    }
+}
+component PageContent inherits VerticalLayout {
+    spacing: 12px;
+    if App.page == 0 : DevicesPage {}
+    if App.page == 2 : AddDevicePage {}
+    if App.page == 3 : InternetPage {}
+    if App.page == 4 : PublicExitsPage {}
+    if App.page == 5 : WalletPage {}
+    if App.page == 6 : SellPage {}
+    if App.page == 7 : SettingsPage {}
+}
+
+export component AppWindow inherits Window {
+    title: "Nostr VPN";
+    icon: @image-url("../assets/icon-256.png");
+    preferred-width: 940px;
+    preferred-height: 660px;
+    min-width: 780px;
+    min-height: 560px;
+    background: Theme.window-bg;
+
+    HorizontalLayout {
+        // Sidebar
+        Rectangle {
+            width: 220px;
+            background: Theme.sidebar-bg;
+            VerticalLayout {
+                padding: 14px;
+                spacing: 4px;
+                alignment: start;
+
+                Button {
+                    text: "Devices";
+                    clicked => { App.request-page(0); }
+                }
+                Button {
+                    text: "Internet";
+                    clicked => { App.request-page(3); }
+                }
+                if App.market-visible : Button {
+                    text: App.wallet-nav-text;
+                    clicked => { App.request-page(5); }
+                }
+                Button {
+                    text: "Settings";
+                    clicked => { App.request-page(7); }
+                }
+
+                Rectangle { vertical-stretch: 1; }
+
+                // Network switcher
+                Rectangle {
+                    height: 54px;
+                    background: Theme.panel-bg;
+                    border-radius: 8px;
+                    HorizontalLayout {
+                        padding-left: 12px;
+                        padding-right: 10px;
+                        spacing: 7px;
+                        VerticalLayout {
+                            alignment: center;
+                            if App.show-network-dot : Dot {
+                                ok: App.network-dot-ok;
+                            }
+                        }
+                        VerticalLayout {
+                            padding-top: 9px;
+                            spacing: 2px;
+                            horizontal-stretch: 1;
+                            Text {
+                                text: App.network-name;
+                                color: Theme.text-primary;
+                                font-weight: 600;
+                                font-size: 13px;
+                                overflow: elide;
+                            }
+                            Text {
+                                text: App.hero-subtitle;
+                                color: Theme.text-secondary;
+                                font-size: 11px;
+                                overflow: elide;
+                            }
+                        }
+                        Text {
+                            text: "⌄";
+                            color: Theme.text-secondary;
+                            vertical-alignment: center;
+                        }
+                    }
+                    TouchArea {
+                        clicked => { network-popup.show(); }
+                    }
+                }
+            }
+        }
+
+        // Main column
+        VerticalLayout {
+            // Header
+            Rectangle {
+                height: 76px;
+                background: Theme.window-bg;
+                HorizontalLayout {
+                    padding-left: 24px;
+                    padding-right: 24px;
+                    spacing: 12px;
+                    alignment: start;
+                    VerticalLayout {
+                        alignment: center;
+                        if App.show-network-dot : Dot {
+                            ok: App.network-dot-ok;
+                        }
+                    }
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        padding-top: 12px;
+                        spacing: 1px;
+                        H1 { text: App.network-name; overflow: elide; }
+                        Text {
+                            text: App.vpn-status-text;
+                            color: App.vpn-status-danger ? Theme.danger : Theme.text-secondary;
+                            font-size: 13px;
+                            overflow: elide;
+                        }
+                    }
+                    if App.action-in-flight : VerticalLayout {
+                        alignment: center;
+                        Spinner { }
+                    }
+                    Button {
+                        text: App.vpn-button-text;
+                        enabled: App.vpn-button-enabled;
+                        primary: true;
+                        clicked => { App.toggle-vpn(); }
+                    }
+                }
+            }
+
+            // Update stripe
+            if App.update-visible : Rectangle {
+                height: 40px;
+                background: Theme.banner-bg;
+                HorizontalLayout {
+                    padding-left: 24px;
+                    padding-right: 24px;
+                    spacing: 10px;
+                    Text {
+                        text: "⤓";
+                        color: Theme.text-secondary;
+                        vertical-alignment: center;
+                    }
+                    Text {
+                        text: App.update-stripe-text;
+                        color: Theme.text-primary;
+                        vertical-alignment: center;
+                        overflow: elide;
+                        horizontal-stretch: 1;
+                    }
+                    CheckBox {
+                        text: "Install automatically";
+                        checked <=> App.auto-install-updates;
+                        toggled => { App.set-auto-install(self.checked); }
+                    }
+                    Button {
+                        text: "Install";
+                        enabled: App.update-install-enabled;
+                        clicked => { App.install-update(); }
+                    }
+                }
+            }
+
+            // Content
+            ScrollView {
+                VerticalLayout {
+                    padding: 24px;
+                    padding-top: 8px;
+                    spacing: 12px;
+                    alignment: start;
+
+                    if App.notice-visible : Card {
+                        Dim { text: App.notice; }
+                    }
+
+                    // No active network, or the Add Network page: setup cards
+                    if !App.has-active-network || App.page == 1 : SetupView {}
+                    if App.has-active-network && App.page != 1 : PageContent {}
+                }
+            }
+        }
+    }
+
+    network-popup := PopupWindow {
+        width: 240px;
+        height: networks-height * 44px + 84px;
+        property <int> networks-height: App.networks.length;
+        VerticalLayout {
+            padding: 8px;
+            spacing: 2px;
+            for network in App.networks : Button {
+                text: network.name;
+                clicked => { App.select-shown-network(network.id); network-popup.close(); }
+            }
+            if App.networks.length > 0 : Rectangle { height: 1px; background: Theme.line; }
+            Button {
+                text: "Add network";
+                clicked => { App.goto-add-network(); network-popup.close(); }
+            }
+        }
+    }
+
+}
+
+export component AboutDialog inherits Window {
+    width: 380px;
+    height: 320px;
+    title: "About Nostr VPN";
+    callback closed();
+    VerticalLayout {
+        padding: 20px;
+        spacing: 12px;
+        AboutSlint {}
+        Button {
+            text: "Close";
+            clicked => { root.closed(); }
+        }
+    }
+}
+
+// Setup cards shown when there is no active network (and on Add Network).

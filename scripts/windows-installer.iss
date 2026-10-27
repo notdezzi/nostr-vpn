@@ -23,21 +23,21 @@ PrivilegesRequired=lowest
 CloseApplications=yes
 CloseApplicationsFilter=NostrVpn.Windows.exe,nostr-vpn-gui.exe
 SetupIconFile={#ProjectRoot}\windows\NostrVpn.Windows\Assets\nostr-vpn.ico
-UninstallDisplayIcon={app}\NostrVpn.Windows.exe
+UninstallDisplayIcon={app}\nostr-vpn-gui.exe
 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#ProjectRoot}\windows\installer\windows-installer-migrate.ps1"; Flags: dontcopy
 
 [Icons]
-Name: "{autoprograms}\Nostr VPN"; Filename: "{app}\NostrVpn.Windows.exe"; IconFilename: "{app}\Assets\nostr-vpn.ico"
-Name: "{autodesktop}\Nostr VPN"; Filename: "{app}\NostrVpn.Windows.exe"; IconFilename: "{app}\Assets\nostr-vpn.ico"; Tasks: desktopicon
+Name: "{autoprograms}\Nostr VPN"; Filename: "{app}\nostr-vpn-gui.exe"; IconFilename: "{app}\Assets\nostr-vpn.ico"
+Name: "{autodesktop}\Nostr VPN"; Filename: "{app}\nostr-vpn-gui.exe"; IconFilename: "{app}\Assets\nostr-vpn.ico"; Tasks: desktopicon
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Additional shortcuts:"
 
 [Run]
-Filename: "{app}\NostrVpn.Windows.exe"; Description: "Launch Nostr VPN"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\nostr-vpn-gui.exe"; Description: "Launch Nostr VPN"; Flags: nowait postinstall skipifsilent
 
 [Code]
 function PrepareToInstall(var NeedsRestart: Boolean): String;
