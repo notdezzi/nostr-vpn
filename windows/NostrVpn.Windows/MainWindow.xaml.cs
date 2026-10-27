@@ -28,6 +28,38 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    // Spawn like Mullvad: 10px inside the bottom-right corner of the primary
+    // work area (their getWindowMargin for Windows 11).
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        var workArea = SystemParameters.WorkArea;
+        Left = workArea.Right - Width - 10;
+        Top = workArea.Bottom - Height - 10;
+    }
+
+    private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ButtonState == MouseButtonState.Pressed)
+        {
+            try
+            {
+                DragMove();
+            }
+            catch (InvalidOperationException)
+            {
+                // DragMove throws when the button was released before the call;
+                // nothing to do then.
+            }
+        }
+    }
+
+    private void TitlebarClose_Click(object sender, RoutedEventArgs e)
+    {
+        Close();
+    }
+
+
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
     {
         if (!App.IsQuitting && ViewModel.State.CloseToTrayOnClose)
@@ -87,13 +119,20 @@ public partial class MainWindow : Window
 
     private void Back_Click(object sender, RoutedEventArgs e)
     {
+        ViewModel.DeviceDetailOpen = false;
         ViewModel.Page = AppPage.Home;
+    }
+
+    private void DeviceDetailBack_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.DeviceDetailOpen = false;
     }
 
     private void HomeDevices_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (ViewModel.Page == AppPage.Home && e.AddedItems.Count > 0)
         {
+            ViewModel.DeviceDetailOpen = true;
             ViewModel.Page = AppPage.Devices;
         }
     }

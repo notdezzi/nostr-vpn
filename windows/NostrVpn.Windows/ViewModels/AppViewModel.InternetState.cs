@@ -254,10 +254,6 @@ public sealed partial class AppViewModel
         }
     }
 
-    public string WalletNavigationText => string.IsNullOrWhiteSpace(State.PaidRouteMarket.Wallet.NavigationBalanceText)
-        ? "Wallet"
-        : $"Wallet {State.PaidRouteMarket.Wallet.NavigationBalanceText}";
-
     public string PaidRouteWalletSecondaryBalanceText => string.IsNullOrWhiteSpace(State.PaidRouteMarket.Wallet.FiatBalanceText)
         ? ""
         : FormatPaidRouteMsat(State.PaidRouteMarket.Wallet.TotalBalanceMsat);

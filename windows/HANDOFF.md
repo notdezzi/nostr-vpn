@@ -18,22 +18,39 @@ navigation changed. Build verified with `scripts/windows-build.ps1
 
 ## Window behavior (Mullvad-style)
 
-The window is **fixed-size (760x640), non-resizable, and non-maximizable**
-(`ResizeMode="NoResize"`, no min/max buttons — just close, like Mullvad's custom
-chrome) and always opens **centered on the screen**; closing to tray and
-reopening keeps the same position. Mullvad itself uses a smaller window
-(~350px wide); we kept more width because the Devices detail and Public Exits
-pages are two-column/dense. Going fully Mullvad-sized would require responsive
-one-column layouts for those pages — noted as a follow-up.
+The window is **borderless, fixed at Mullvad's exact size (320x568),
+non-resizable** (`WindowStyle="None"` + `WindowChrome` with a 1px glass frame,
+so the DWM drop shadow and Windows 11 rounded corners remain). There is a
+**custom minimal titlebar**: the app name on the left, then Account / Wallet /
+Settings icons and a close button on the right; dragging anywhere on the
+titlebar moves the window.
+
+The window **spawns in the bottom-right corner of the primary work area, 10px
+from each edge** — the same placement Mullvad uses on Windows 11 (their
+`getWindowMargin` for Win11 is 10px). `OnSourceInitialized` computes
+`Left/Top` from `SystemParameters.WorkArea`; after that, the window keeps
+whatever position the user drags it to (also across close-to-tray re-shows).
+
+Scrollbars are **custom minimal**: 8px rounded thumb (`ScrollThumb` /
+`ScrollThumbHover` theme brushes), no track buttons or track fill, applied
+globally via a `ScrollBar` style in `App.xaml` (vertical and horizontal).
+
+Mullvad's 320px width forced single-column layouts everywhere: the Devices
+page became a **drill-down** (list card, then a device detail card with a
+"‹ Devices" back button, driven by the `DeviceDetailOpen` view-model flag),
+dense button rows (rename/hints/actions, Public Exits filters and offer
+actions, System tools, update banner) wrap instead of using side-by-side
+columns, and the Internet source picker shows title + subtitle stacked.
 
 ## New information architecture
 
-**Shell (Mullvad-style):** the left sidebar is gone. One header bar:
-"Nostr VPN" on the left; on the right, in order: **Account** (user icon),
-**Wallet** (shows the balance), **Settings**. Below the header: the global
-update banner, the notice line, then the page content, centered over the
-theme (dark theme is charcoal `#121212` with soft-gray `#888888` accent; light
-theme unchanged in spirit).
+**Shell (Mullvad-style):** the left sidebar and the native title bar are gone.
+One custom titlebar row: "Nostr VPN" on the left; on the right, in order:
+**Account** (user icon), **Wallet**, **Settings**, and the window **close**
+button; the whole row drags the window. Below the titlebar: the global update
+banner, the notice line, then the page content over the theme (dark theme is
+charcoal `#121212` with soft-gray `#888888` accent; light theme unchanged in
+spirit).
 
 **Home (new default page)** — replaces both the old header toggle area and the
 map/location idea:
@@ -115,7 +132,11 @@ ViewModel additions (small, additive): `AppPage.Home` and `AppPage.Account`
 (new default page + account page), `ShowAccountCommand`,
 `IsProMode` (persisted in `HKCU\Software\Nostr VPN\ProMode`),
 `ConnectButtonText`, `VpnHeadlineText` / `VpnHeadlineBrush`,
-`InternetSourceSummary`. Enrollment flows now land on Home instead of Devices.
+`InternetSourceSummary`, and `DeviceDetailOpen` for the Devices drill-down.
+Removed with the compact titlebar: `WalletNavigationText` and its
+`NavigationBalanceText` model field (the header wallet button is icon-only
+now; the balance is on the Account and Wallet pages). Enrollment flows now
+land on Home instead of Devices.
 
 Theme: `Themes/Dark.xaml` is a charcoal palette — background `#121212`, cards
 `#1E1E1E`, primary text `#E0E0E0`, secondary text `#B0B0B0`, borders
@@ -129,8 +150,9 @@ warnings). `Themes/Light.xaml` uses the same green accent on white.
 - The Devices page still contains the old "no network yet" setup cards; they
   are unreachable in normal flow (Home handles it) and kept only as a safety
   net — candidate for deletion in a follow-up pass.
-- Per-device detail could later open as an overlay on Home instead of
-  navigating to the Devices page.
+- At 320px some pre-existing wide controls rely on text trimming (account
+  card values, Wallet receive/send rows, relay URLs) rather than dedicated
+  narrow layouts.
 - The profile panel is read-only except copy/wallet; editing the device name
   lives in Settings → This device.
 

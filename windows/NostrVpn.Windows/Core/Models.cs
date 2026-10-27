@@ -173,7 +173,6 @@ public sealed class NativePaidRouteWalletState
     public bool BalanceKnown { get; set; }
     public ulong TotalBalanceMsat { get; set; }
     public string TotalBalanceText { get; set; } = "";
-    public string NavigationBalanceText { get; set; } = "";
     public string FiatCurrency { get; set; } = "";
     public string FiatBalanceText { get; set; } = "";
     public string ExchangeRateText { get; set; } = "";

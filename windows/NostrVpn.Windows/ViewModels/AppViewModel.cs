@@ -38,6 +38,7 @@ public sealed partial class AppViewModel : INotifyPropertyChanged, IDisposable
     private readonly UpdateService _updateService = new();
     private NativeAppState _state = new();
     private AppPage _page = AppPage.Home;
+    private bool _deviceDetailOpen;
     private string _selectedParticipantKey = "";
     private string _shownNetworkId = "";
     private bool _actionInFlight;
@@ -218,6 +219,12 @@ public sealed partial class AppViewModel : INotifyPropertyChanged, IDisposable
             _page = nextPage;
             OnPropertyChanged();
         }
+    }
+
+    public bool DeviceDetailOpen
+    {
+        get => _deviceDetailOpen;
+        set => SetField(ref _deviceDetailOpen, value);
     }
 
     public bool ActionInFlight

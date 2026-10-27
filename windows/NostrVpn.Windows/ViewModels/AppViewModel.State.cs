@@ -239,7 +239,6 @@ public sealed partial class AppViewModel
         OnPropertyChanged(nameof(PaidRouteWalletInvoiceQr));
         OnPropertyChanged(nameof(PaidRouteWalletInvoiceExpiryText));
         OnPropertyChanged(nameof(HasPaidRouteWalletMint));
-        OnPropertyChanged(nameof(WalletNavigationText));
         OnPropertyChanged(nameof(PaidRouteWalletSecondaryBalanceText));
         OnPropertyChanged(nameof(PaidRouteWalletRateText));
         OnPropertyChanged(nameof(PaidRouteMarketStatusText));

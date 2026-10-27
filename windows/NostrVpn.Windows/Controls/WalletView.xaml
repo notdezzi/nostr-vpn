@@ -19,16 +19,17 @@
       </DockPanel>
       <TextBlock Text="{Binding State.PaidRouteMarket.Wallet.LastAction.DisplayStatusText}" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Visibility="{Binding State.PaidRouteMarket.Wallet.LastAction.DisplayStatusText, Converter={StaticResource NonEmptyStringToVisibility}}" />
 
-      <Grid Margin="0,10,0,8">
-        <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="130" />
-          <ColumnDefinition Width="*" />
-          <ColumnDefinition Width="Auto" />
-        </Grid.ColumnDefinitions>
-        <TextBlock Text="Mint URL" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" Margin="0,0,10,0" />
-        <TextBox Grid.Column="1" Text="{Binding PaidRouteMintUrl, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,8,0" />
-        <Button Grid.Column="2" Content="Add" Click="AddPaidRouteWalletMint_Click" IsEnabled="{Binding CanAddPaidRouteWalletMint}" />
-      </Grid>
+      <StackPanel Margin="0,10,0,8">
+        <TextBlock Text="Mint URL" Foreground="{DynamicResource TextSecondary}" Margin="0,0,0,4" />
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+          </Grid.ColumnDefinitions>
+          <TextBox Text="{Binding PaidRouteMintUrl, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,8,0" />
+          <Button Grid.Column="1" Content="Add" Click="AddPaidRouteWalletMint_Click" IsEnabled="{Binding CanAddPaidRouteWalletMint}" />
+        </Grid>
+      </StackPanel>
 
       <TabControl Margin="0,4,0,8" Background="{DynamicResource PanelBg}" BorderBrush="{DynamicResource Line}" Foreground="{DynamicResource TextPrimary}">
         <TabItem Header="Receive">
