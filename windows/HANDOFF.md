@@ -45,6 +45,13 @@ notification area" setting and its `CloseToTrayOnClose` plumbing were removed.
 The launch smoke runs in default (window-required) mode, since a direct launch
 now shows the window.
 
+The **tray menu is minimal**: "Nostr VPN" toggle with a status subtitle, an
+"Internet Source" submenu (share/current source picker), then Open / Quit —
+device lists and Copy Device ID live in the window, not the tray. The menu
+pins `Segoe UI 9pt` explicitly because the WinForms menu font otherwise
+auto-scales on top of the WPF process DPI awareness and renders oversized at
+display scaling above 100%.
+
 The window **spawns in the bottom-right corner of the primary work area, 10px
 from each edge** — the same placement Mullvad uses on Windows 11 (their
 `getWindowMargin` for Win11 is 10px). `OnSourceInitialized` computes
@@ -143,10 +150,11 @@ internet", "Through a device in your network", "Paid internet (automatic)", …)
   `ExitDnsInternetNavigation` (now the Home internet row),
   `ManualJoinAdminOpen` (now the Home "+ Add device"), and the new
   `HomeNetworkSwitcher` / `ConnectToggle`.
-- **Tray menu**, deep links (`nvpn://join-request/…`), refresh cadence, join
+- **Deep links** (`nvpn://join-request/…`), refresh cadence, join
   coordination fast-refresh, update polling, themes (Light/Dark/System), and
   single-instance behavior. (Close-to-tray is now unconditional; the tray
-  icon click toggles the window instead of the old double-click.)
+  icon click toggles the window instead of the old double-click, and the
+  tray menu was trimmed to a minimal Mullvad-style set.)
 - Pages the user never asked to move: Public Exits (paid market), Sell Access,
   and the Wallet keep their content, just restyled and reachable via
   Back buttons and the header wallet button.

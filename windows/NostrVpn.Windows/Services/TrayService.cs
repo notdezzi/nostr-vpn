@@ -12,6 +12,9 @@ public sealed class TrayService : IDisposable
     private readonly NotifyIcon _notifyIcon;
     private readonly Icon _normalIcon;
     private readonly Icon _blockedIcon;
+    // Built once and shared by every rebuilt menu; ContextMenuStrip.Dispose
+    // does not dispose an externally assigned Font.
+    private static readonly Font TrayFont = new("Segoe UI", 9f);
     private AppViewModel? _viewModel;
     private Action? _showWindow;
     private Action? _toggleWindow;
@@ -73,41 +76,26 @@ public sealed class TrayService : IDisposable
 
     private ContextMenuStrip BuildMenu(AppViewModel viewModel)
     {
-        // 1. VPN toggle (first), 2. device-name section, 3. network/exit
-        // submenus, 4. open/quit. See macOS TrayController.swift for the
-        // canonical layout shared across platforms.
-        var menu = new ContextMenuStrip();
+        // Minimal Mullvad-style tray menu: VPN toggle + status, the internet
+        // source picker, then open/quit. Device management lives in the app
+        // window (Home / Account / Internet). The font is pinned because the
+        // WinForms menu font auto-scales on top of the WPF process DPI
+        // awareness and renders oversized at >100% display scaling.
+        var menu = new ContextMenuStrip { Font = TrayFont };
 
         var vpnToggle = Item("Nostr VPN", async (_, _) => await viewModel.ToggleVpnAsync(),
             viewModel.State.VpnControlSupported && !viewModel.ActionInFlight);
         vpnToggle.Checked = viewModel.State.VpnEnabled;
         menu.Items.Add(vpnToggle);
         // Status subtitle right below the toggle, mirrors the macOS row's
-        // second line and reuses the same VpnStatusText that the header
-        // shows in the main window.
+        // second line and reuses the same VpnStatusText that the footer shows.
         menu.Items.Add(Item(viewModel.VpnStatusText, (_, _) => { }, false));
-
-        menu.Items.Add(new ToolStripSeparator());
-
-        // Device-name section header + Copy Device ID.
-        menu.Items.Add(Item(DeviceDisplayName(viewModel), (_, _) => { }, false));
-        var copyDeviceId = Item("Copy Device ID",
-            (_, _) => viewModel.CopyText(viewModel.State.OwnNpub),
-            !string.IsNullOrWhiteSpace(viewModel.State.OwnNpub));
-        menu.Items.Add(copyDeviceId);
 
         menu.Items.Add(new ToolStripSeparator());
 
         var network = viewModel.ActiveNetwork;
         if (network is not null)
         {
-            var devices = new ToolStripMenuItem(string.IsNullOrWhiteSpace(network.Name) ? "Network Devices" : network.Name);
-            foreach (var participant in network.Participants)
-            {
-                devices.DropDownItems.Add(Item(ParticipantMenuTitle(participant), (_, _) => viewModel.CopyText(participant.Npub)));
-            }
-            menu.Items.Add(devices);
-
             var exitNodes = new ToolStripMenuItem("Internet Source");
             if (!string.IsNullOrWhiteSpace(viewModel.State.ExitNodeStatusText))
             {
@@ -146,25 +134,6 @@ public sealed class TrayService : IDisposable
         menu.Items.Add(Item("Open Nostr VPN", (_, _) => _showWindow?.Invoke()));
         menu.Items.Add(Item("Quit", (_, _) => _quit?.Invoke()));
         return menu;
-    }
-
-    private static string DeviceDisplayName(AppViewModel viewModel)
-    {
-        var state = viewModel.State;
-        if (!string.IsNullOrWhiteSpace(state.SelfMagicDnsName))
-        {
-            return state.SelfMagicDnsName;
-        }
-        if (!string.IsNullOrWhiteSpace(state.NodeName))
-        {
-            return state.NodeName;
-        }
-        var tunnelIp = state.TunnelIp?.Trim();
-        if (!string.IsNullOrEmpty(tunnelIp) && tunnelIp != "-")
-        {
-            return tunnelIp;
-        }
-        return "This Device";
     }
 
     private static ToolStripMenuItem Item(string text, EventHandler onClick, bool enabled = true)
@@ -224,14 +193,6 @@ public sealed class TrayService : IDisposable
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool DestroyIcon(IntPtr handle);
-
-    private static string ParticipantMenuTitle(NativeParticipantState participant)
-    {
-        var name = DeviceName(participant);
-        return string.IsNullOrWhiteSpace(participant.TunnelIp) || participant.TunnelIp == "-"
-            ? name
-            : $"{name} ({participant.TunnelIp})";
-    }
 
     private static string DeviceName(NativeParticipantState participant)
     {
