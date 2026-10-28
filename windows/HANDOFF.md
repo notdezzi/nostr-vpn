@@ -63,6 +63,30 @@ Scrollbars are **custom minimal**: a 3px rounded thumb (`ScrollThumb` /
 `ScrollThumbHover` theme brushes), no track buttons or track fill, applied
 globally via a `ScrollBar` style in `App.xaml` (vertical and horizontal).
 
+**Themed chrome (polish pass):** every remaining system-drawn control got an
+implicit style in `App.xaml` so nothing renders with light Windows chrome in
+the dark theme:
+- **List rows** (`ListBoxItem`) draw a rounded hover pill (`HoverBg`, 6px
+  corners, 10px horizontal padding) instead of the default sharp-cornered
+  highlight that sat flush against the row text; selected rows get
+  `AccentSoft`, and keyboard focus gets an accent outline. The Home device
+  rows inherit this via `BasedOn="{StaticResource {x:Type ListBoxItem}}"`.
+- **Menus** — the footer network switcher's `ContextMenu` renders as a rounded
+  `PanelBg` panel with pill-highlighted `MenuItem`s, a ✓ for checked items,
+  themed `Separator`s, and themed submenus; the old per-menu brush overrides
+  in `OpenNetworkMenu` were dropped (the template owns the chrome).
+- **Inputs** — `TextBox` and `ComboBox` are rounded 6px fields with themed
+  caret/selection and an accent border on focus/open; `ComboBoxItem`s get the
+  same pill highlight; the combo popup is a themed rounded panel.
+- **`ToolTip`s** are themed dark/light panels instead of the yellow system tip.
+- **Buttons** use 6px corners (matching cards at 8px) and show an accent
+  border when keyboard-focused (titlebar icon buttons: soft fill), so focus
+  remains visible with the system focus visuals overridden.
+
+Both themes define `HoverBg` (dark `#2A2A2A`, light `#EEF2F5`) for these
+hover pills. Also, closing the device drill-down clears the ListBox selection
+so no row keeps a stale highlight after returning to Home.
+
 Mullvad's 320px width forced single-column layouts everywhere: dense button
 rows (rename/hints/actions, Public Exits filters and offer actions, System
 tools, update banner) wrap instead of using side-by-side columns, and the

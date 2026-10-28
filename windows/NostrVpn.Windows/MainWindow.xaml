@@ -169,17 +169,16 @@
                            HorizontalContentAlignment="Stretch"
                            ScrollViewer.VerticalScrollBarVisibility="Disabled"
                            PreviewMouseLeftButtonDown="HomeDeviceList_PreviewMouseLeftButtonDown">
-                    <ListBox.ItemContainerStyle>
-                      <Style TargetType="{x:Type ListBoxItem}">
-                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                        <Setter Property="Padding" Value="0" />
-                        <Setter Property="Margin" Value="0" />
-                        <Setter Property="Cursor" Value="Hand" />
-                      </Style>
-                    </ListBox.ItemContainerStyle>
+                  <ListBox.ItemContainerStyle>
+                    <!-- Inherits the app-wide rounded hover pill; rows are
+                         click affordances, hence the hand cursor. -->
+                    <Style TargetType="{x:Type ListBoxItem}" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+                      <Setter Property="Cursor" Value="Hand" />
+                    </Style>
+                  </ListBox.ItemContainerStyle>
                     <ListBox.ItemTemplate>
                       <DataTemplate>
-                        <Border Padding="0,10" AutomationProperties.AutomationId="{Binding AcceptedRosterAutomationId}">
+                        <Border Padding="0,7" AutomationProperties.AutomationId="{Binding AcceptedRosterAutomationId}">
                           <Grid>
                             <Grid.ColumnDefinitions>
                               <ColumnDefinition Width="Auto" />

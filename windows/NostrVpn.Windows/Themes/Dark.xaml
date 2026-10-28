@@ -7,6 +7,7 @@
   <SolidColorBrush x:Key="TextSecondary" Color="#B0B0B0" />
   <SolidColorBrush x:Key="Accent" Color="#888888" />
   <SolidColorBrush x:Key="AccentSoft" Color="#2E2E2E" />
+  <SolidColorBrush x:Key="HoverBg" Color="#2A2A2A" />
   <SolidColorBrush x:Key="AccentText" Color="#121212" />
   <SolidColorBrush x:Key="Ok" Color="#4CAF50" />
   <SolidColorBrush x:Key="Warn" Color="#D6A144" />

@@ -76,6 +76,9 @@ public partial class MainWindow : Window
         if (ViewModel.DeviceDetailOpen)
         {
             ViewModel.DeviceDetailOpen = false;
+            // Selection is momentary navigation, not a state to display: drop
+            // the row highlight so returning to the list shows no stale pill.
+            HomeDeviceList.SelectedIndex = -1;
             return;
         }
         ViewModel.Page = AppPage.Home;
@@ -139,9 +142,6 @@ public partial class MainWindow : Window
         {
             PlacementTarget = anchor,
             Placement = PlacementMode.Bottom,
-            Background = ThemeService.Brush("PanelBg"),
-            BorderBrush = ThemeService.Brush("Line"),
-            Foreground = ThemeService.Brush("TextPrimary"),
         };
         foreach (var network in ViewModel.State.Networks)
         {
