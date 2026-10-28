@@ -64,7 +64,11 @@ whatever position the user drags it to (also across close-to-tray re-shows).
 
 Scrollbars are **custom minimal**: a 3px rounded thumb (`ScrollThumb` /
 `ScrollThumbHover` theme brushes), no track buttons or track fill, applied
-globally via a `ScrollBar` style in `App.xaml` (vertical and horizontal).
+globally via a `ScrollBar` style in `App.xaml` (vertical and horizontal). The
+style must pin `MinWidth`/`MinHeight` to 0 — WPF keeps the theme's default
+`ScrollBar` style active underneath any implicit style, and its system-width
+`MinWidth` clamps the bar to 17px otherwise (verified by measuring the
+rendered bar via UI automation: 17px before the pin, 3px after).
 
 **Themed chrome (polish pass):** every remaining system-drawn control got an
 implicit style in `App.xaml` so nothing renders with light Windows chrome in

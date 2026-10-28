@@ -163,10 +163,15 @@
         <Setter Property="TextWrapping" Value="Wrap" />
       </Style>
 
-      <!-- Minimal scrollbars: 3px rounded thumb, no track buttons, no track fill. -->
+      <!-- Minimal scrollbars: 3px rounded thumb, no track buttons, no track fill.
+           MinWidth/MinHeight must be pinned to 0: the theme's default ScrollBar
+           style stays active underneath any implicit style and clamps the bar
+           to the system scrollbar width otherwise. -->
       <Style TargetType="{x:Type ScrollBar}">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Width" Value="3" />
+        <Setter Property="MinWidth" Value="0" />
+        <Setter Property="MinHeight" Value="0" />
         <Setter Property="Template">
           <Setter.Value>
             <ControlTemplate TargetType="{x:Type ScrollBar}">
@@ -204,6 +209,8 @@
           <Trigger Property="Orientation" Value="Horizontal">
             <Setter Property="Width" Value="Auto" />
             <Setter Property="Height" Value="3" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
             <Setter Property="Template">
               <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ScrollBar}">
