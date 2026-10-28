@@ -19,6 +19,13 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = viewModel;
+        viewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(AppViewModel.Page) or nameof(AppViewModel.DeviceDetailOpen))
+            {
+                PageScroll.ScrollToTop();
+            }
+        };
     }
 
     private AppViewModel ViewModel => (AppViewModel)DataContext;
@@ -66,7 +73,7 @@ public partial class MainWindow : Window
 
     private void TitlebarBack_Click(object sender, RoutedEventArgs e)
     {
-        if (ViewModel.Page == AppPage.Devices && ViewModel.DeviceDetailOpen)
+        if (ViewModel.DeviceDetailOpen)
         {
             ViewModel.DeviceDetailOpen = false;
             return;
@@ -156,12 +163,19 @@ public partial class MainWindow : Window
         menu.IsOpen = true;
     }
 
-    private void HomeDevices_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    // Clicking a device drills into its detail while staying on Home, so the
+    // footer network selector and VPN toggle remain visible. Preview is used
+    // because clicking the already-selected row raises no SelectionChanged.
+    private void HomeDeviceList_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (ViewModel.Page == AppPage.Home && e.AddedItems.Count > 0)
+        if (ViewModel.Page != AppPage.Home)
+        {
+            return;
+        }
+        if (sender is ItemsControl items
+            && ItemsControl.ContainerFromElement(items, e.OriginalSource as DependencyObject) is not null)
         {
             ViewModel.DeviceDetailOpen = true;
-            ViewModel.Page = AppPage.Devices;
         }
     }
 
@@ -218,6 +232,7 @@ public partial class MainWindow : Window
                 _suppressHideOnDeactivate = false;
             }
             await ViewModel.RemoveParticipantAsync(participant);
+            ViewModel.DeviceDetailOpen = false;
         }
     }
 
@@ -550,6 +565,7 @@ public partial class MainWindow : Window
                 _suppressHideOnDeactivate = false;
             }
             await ViewModel.RemoveNetworkAsync(networkId);
+            ViewModel.DeviceDetailOpen = false;
         }
     }
 

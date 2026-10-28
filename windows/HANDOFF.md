@@ -25,10 +25,11 @@ with a 1px glass frame for the DWM drop shadow, and an explicit
 `OnSourceInitialized` — borderless windows are not rounded by default on
 Windows 11; older systems just stay square). The titlebar
 has **no close button** — on the left there is a fixed slot that shows the
-"Nostr VPN" title on Home and a **back chevron on every other page** (exactly
-where the title sits, so it never moves); on the right: Account, Wallet,
-Settings. The whole row drags the window. The titlebar back chevron also backs
-out of the Devices drill-down (detail → list → Home).
+"Nostr VPN" title on Home and a **back chevron everywhere else** (exactly where
+the title sits, so it never moves; the chevron also appears while a device
+detail is drilled open on Home); on the right: Account, Wallet, Settings. The
+whole row drags the window. Back always returns to the base Home cards in one
+step.
 
 **Tray-only lifecycle** (Mullvad-style): a **direct launch — double-clicking
 the exe or opening it from the Start menu — shows the window** (bottom-right).
@@ -62,13 +63,16 @@ Scrollbars are **custom minimal**: a 3px rounded thumb (`ScrollThumb` /
 `ScrollThumbHover` theme brushes), no track buttons or track fill, applied
 globally via a `ScrollBar` style in `App.xaml` (vertical and horizontal).
 
-Mullvad's 320px width forced single-column layouts everywhere: the Devices
-page became a **drill-down** (list card, then a device detail card, driven by
-the `DeviceDetailOpen` view-model flag), dense button rows (rename/hints/
-actions, Public Exits filters and offer actions, System tools, update banner)
-wrap instead of using side-by-side columns, and the Internet source picker
-shows title + subtitle stacked. The in-content Back buttons were removed —
-the titlebar chevron is the single back control.
+Mullvad's 320px width forced single-column layouts everywhere: dense button
+rows (rename/hints/actions, Public Exits filters and offer actions, System
+tools, update banner) wrap instead of using side-by-side columns, and the
+Internet source picker shows title + subtitle stacked. The in-content Back
+buttons were removed — the titlebar chevron is the single back control. The
+old **Devices page is deleted**: its device list duplicated Home's card and its
+"no network yet" setup cards duplicated the AddNetwork page, so the surviving
+device detail now lives **on Home** as a drill-down (`DeviceDetailOpen` swaps
+the Home cards for the detail card); `AppPage.Devices` and the unused
+`ShowDevicesCommand` are gone.
 
 ## New information architecture
 
@@ -82,9 +86,12 @@ spirit).
 
 **Home (new default page)** — the Mullvad "map screen" equivalent:
 1. **Devices card** — the device list (dot = reachable, name with
-   This device/Admin/Exit badges, IP + state). Clicking a device opens the full
-   Devices page for that device (rename, admin, remove, addresses,
-   connectivity stats). Admins see **+ Add device**.
+   This device/Admin/Exit badges, IP + state). Clicking a device swaps the Home
+   cards for that device's **detail drill-down** (rename, admin, remove,
+   addresses, connectivity stats) while **the footer stays pinned**, so the
+   network selector and Connect toggle never disappear; the titlebar chevron
+   (one Back) returns to the base cards. The rows carry the e2e
+   `RosterParticipantAccepted-<npub>` AutomationId. Admins see **+ Add device**.
 2. **Internet card** — one row showing the current internet source in plain
    text; clicking opens the full Internet page (source picker, sharing,
    WireGuard upstream, Exit DNS).
@@ -104,10 +111,13 @@ not a popout — device name, MagicDNS name, VPN IP, **Device ID with Copy**
 (with a plain hint: "Share this with a network admin so they can add you"), a
 **Wallet card (balance + Open wallet)**, and the app/daemon version.
 
-**Back navigation:** every sub-page (Account, Devices, Add Network, Add
-Device, Internet, Public Exits, Wallet, Sell Access, Settings) is left via the
+**Back navigation:** every sub-page (Account, Add Network, Add Device,
+Internet, Public Exits, Wallet, Sell Access, Settings) is left via the
 **‹ chevron in the titlebar** (where the app title sits on Home) — there are
-no in-content Back buttons anymore.
+no in-content Back buttons anymore. Navigating always scrolls the content back
+to the top, leaving Home closes an open device drill-down, and removing a
+device or network closes the detail instead of silently showing another
+device.
 
 ## Settings — sorted and renamed
 
@@ -163,7 +173,8 @@ ViewModel additions (small, additive): `AppPage.Home` and `AppPage.Account`
 (new default page + account page), `ShowAccountCommand`,
 `IsProMode` (persisted in `HKCU\Software\Nostr VPN\ProMode`),
 `ConnectButtonText`, `VpnHeadlineText` / `VpnHeadlineBrush`,
-`InternetSourceSummary`, and `DeviceDetailOpen` for the Devices drill-down.
+`InternetSourceSummary`, and `DeviceDetailOpen` for the Home device
+drill-down.
 Removed during the compact-titlebar pass: `WalletNavigationText` and its
 `NavigationBalanceText` model field (the header wallet button is icon-only
 now; the balance is on the Account and Wallet pages), and the close-to-tray
@@ -180,9 +191,9 @@ warnings). `Themes/Light.xaml` uses the same green accent on white.
 
 - The old sidebar's "Add network" entry point is now the Home network card menu
   and Settings → Network; no dedicated page in the nav (matches Mullvad).
-- The Devices page still contains the old "no network yet" setup cards; they
-  are unreachable in normal flow (Home handles it) and kept only as a safety
-  net — candidate for deletion in a follow-up pass.
+- The duplicate Devices-page UI (device list, "no network yet" setup cards) was
+  deleted; the AddNetwork page is the single create/join flow and Home the
+  single device list.
 - At 320px some pre-existing wide controls rely on text trimming (account
   card values, Wallet receive/send rows, relay URLs) rather than dedicated
   narrow layouts.
@@ -195,7 +206,8 @@ warnings). `Themes/Light.xaml` uses the same green accent on white.
    network" on a fresh data dir (`NVPN_APP_DATA_DIR` to isolate).
 2. Create a network → lands on Home with the connect pill; Connect/Disconnect
    toggles the headline Protected/Not protected.
-3. Home device rows → Devices detail (rename, copy, admin actions).
+3. Home device rows → detail drill-down on Home (footer stays pinned; one Back
+   returns to the cards; re-clicking the selected row still reopens it).
 4. Internet page: switch source to This device / peer exit; verify Home
    internet row text updates.
 5. Profile panel: copy Device ID; Open wallet switches to the Wallet page.

@@ -20,7 +20,6 @@ public enum AppPage
 {
     Home,
     Account,
-    Devices,
     AddNetwork,
     AddDevice,
     Internet,
@@ -118,7 +117,6 @@ public sealed partial class AppViewModel : INotifyPropertyChanged, IDisposable
         ApplyState(_core.State(), syncDrafts: true);
         SyncLaunchOnStartupRegistration();
 
-        ShowDevicesCommand = new RelayCommand(_ => Page = AppPage.Devices);
         ShowAccountCommand = new RelayCommand(_ => Page = AppPage.Account);
         ShowAddNetworkCommand = new RelayCommand(_ =>
         {
@@ -215,6 +213,12 @@ public sealed partial class AppViewModel : INotifyPropertyChanged, IDisposable
             if (_page == AppPage.AddNetwork && nextPage != AppPage.AddNetwork)
             {
                 SetNetworkSetupMode("");
+            }
+            // The device drill-down lives on Home; leaving Home closes it so
+            // coming back shows the base cards, not a stale detail.
+            if (nextPage != AppPage.Home && _deviceDetailOpen)
+            {
+                DeviceDetailOpen = false;
             }
             _page = nextPage;
             OnPropertyChanged();
@@ -731,7 +735,6 @@ public sealed partial class AppViewModel : INotifyPropertyChanged, IDisposable
     public string DiagnosticsPeers => $"{State.ConnectedPeerCount}/{State.ExpectedPeerCount}";
     public string DiagnosticsFips => $"{State.FipsConnectedPeerCount}/{State.FipsRosterPeerCount} direct";
     public string DiagnosticsOtherFips => $"{State.NonFipsRosterPeerCount}";
-    public ICommand ShowDevicesCommand { get; }
     public ICommand ShowAccountCommand { get; }
     public ICommand ShowAddNetworkCommand { get; }
     public ICommand ShowAddDeviceCommand { get; }

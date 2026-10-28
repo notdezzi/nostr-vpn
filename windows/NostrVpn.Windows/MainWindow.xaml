@@ -74,6 +74,10 @@
                   <DataTrigger Binding="{Binding Page, Converter={StaticResource PageVisibility}, ConverterParameter=Home}" Value="Visible">
                     <Setter Property="Visibility" Value="Visible" />
                   </DataTrigger>
+                  <!-- A device drill-down on Home also shows the chevron. -->
+                  <DataTrigger Binding="{Binding DeviceDetailOpen}" Value="True">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                  </DataTrigger>
                 </Style.Triggers>
               </Style>
             </TextBlock.Style>
@@ -87,6 +91,9 @@
                 <Style.Triggers>
                   <DataTrigger Binding="{Binding Page, Converter={StaticResource PageVisibility}, ConverterParameter=Home}" Value="Visible">
                     <Setter Property="Visibility" Value="Collapsed" />
+                  </DataTrigger>
+                  <DataTrigger Binding="{Binding DeviceDetailOpen}" Value="True">
+                    <Setter Property="Visibility" Value="Visible" />
                   </DataTrigger>
                 </Style.Triggers>
               </Style>
@@ -123,7 +130,7 @@
       </StackPanel>
     </Border>
 
-    <ScrollViewer Grid.Row="2"
+    <ScrollViewer x:Name="PageScroll" Grid.Row="2"
                   VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled"
                   HorizontalContentAlignment="Stretch">
@@ -135,95 +142,216 @@
 
           <!-- ==================== Home ==================== -->
           <StackPanel Visibility="{Binding Page, Converter={StaticResource PageVisibility}, ConverterParameter=Home}">
-            <Button Style="{StaticResource CardButton}"
-                    Command="{Binding ShowAddNetworkCommand}"
-                    Visibility="{Binding HasActiveNetwork, Converter={StaticResource InverseBoolToVisibility}}">
-              <StackPanel>
-                <TextBlock Text="Set up your network" FontSize="20" FontWeight="SemiBold" />
-                <TextBlock Text="Create a new network, or join one you were invited to." Style="{StaticResource HelperText}" Margin="0,4,0,0" />
-              </StackPanel>
-            </Button>
+            <!-- Base Home cards, hidden while a device detail is drilled open. -->
+            <StackPanel Visibility="{Binding DeviceDetailOpen, Converter={StaticResource InverseBoolToVisibility}}">
+              <Button Style="{StaticResource CardButton}"
+                      Command="{Binding ShowAddNetworkCommand}"
+                      Visibility="{Binding HasActiveNetwork, Converter={StaticResource InverseBoolToVisibility}}">
+                <StackPanel>
+                  <TextBlock Text="Set up your network" FontSize="20" FontWeight="SemiBold" />
+                  <TextBlock Text="Create a new network, or join one you were invited to." Style="{StaticResource HelperText}" Margin="0,4,0,0" />
+                </StackPanel>
+              </Button>
 
-            <Border Style="{StaticResource Card}" Visibility="{Binding HasActiveNetwork, Converter={StaticResource BoolToVisibility}}">
-              <StackPanel>
-                <DockPanel Margin="0,0,0,6">
-                  <Button DockPanel.Dock="Right" Command="{Binding ShowAddDeviceCommand}" Content="+ Add device" Visibility="{Binding ActiveNetwork.LocalIsAdmin, Converter={StaticResource BoolToVisibility}}" AutomationProperties.AutomationId="ManualJoinAdminOpen" />
+              <Border Style="{StaticResource Card}" Visibility="{Binding HasActiveNetwork, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel>
+                  <DockPanel Margin="0,0,0,6">
+                    <Button DockPanel.Dock="Right" Command="{Binding ShowAddDeviceCommand}" Content="+ Add device" Visibility="{Binding ActiveNetwork.LocalIsAdmin, Converter={StaticResource BoolToVisibility}}" AutomationProperties.AutomationId="ManualJoinAdminOpen" />
+                    <TextBlock Text="Devices" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" />
+                  </DockPanel>
+                  <ListBox x:Name="HomeDeviceList"
+                           ItemsSource="{Binding ActiveNetwork.Participants}"
+                           SelectedValue="{Binding SelectedParticipantKey, Mode=TwoWay}"
+                           SelectedValuePath="SelectionKey"
+                           BorderThickness="0"
+                           Background="Transparent"
+                           Foreground="{DynamicResource TextPrimary}"
+                           HorizontalContentAlignment="Stretch"
+                           ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                           PreviewMouseLeftButtonDown="HomeDeviceList_PreviewMouseLeftButtonDown">
+                    <ListBox.ItemContainerStyle>
+                      <Style TargetType="{x:Type ListBoxItem}">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="Margin" Value="0" />
+                        <Setter Property="Cursor" Value="Hand" />
+                      </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                      <DataTemplate>
+                        <Border Padding="0,10" AutomationProperties.AutomationId="{Binding AcceptedRosterAutomationId}">
+                          <Grid>
+                            <Grid.ColumnDefinitions>
+                              <ColumnDefinition Width="Auto" />
+                              <ColumnDefinition Width="*" />
+                              <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Ellipse Width="8" Height="8" VerticalAlignment="Top" Margin="0,6,10,0">
+                              <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                  <Setter Property="Fill" Value="{DynamicResource StatusDotIdle}" />
+                                  <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Reachable}" Value="True">
+                                      <Setter Property="Fill" Value="{DynamicResource StatusDotOk}" />
+                                    </DataTrigger>
+                                  </Style.Triggers>
+                                </Style>
+                              </Ellipse.Style>
+                            </Ellipse>
+                            <StackPanel Grid.Column="1">
+                              <WrapPanel>
+                                <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="This device" Margin="8,0,0,0" Foreground="{DynamicResource Ok}" Visibility="{Binding IsSelf, Converter={StaticResource BoolToVisibility}}" />
+                                <TextBlock Text="Admin" Margin="8,0,0,0" Foreground="{DynamicResource Accent}" Visibility="{Binding IsAdmin, Converter={StaticResource BoolToVisibility}}" />
+                                <TextBlock Text="Exit" Margin="8,0,0,0" Foreground="{DynamicResource Warn}" Visibility="{Binding OffersExitNode, Converter={StaticResource BoolToVisibility}}" />
+                              </WrapPanel>
+                              <TextBlock Style="{StaticResource HelperText}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis">
+                                <Run Text="{Binding CleanTunnelIp, Mode=OneWay}" /><Run Text="  ·  " /><Run Text="{Binding ConnectivityStateText, Mode=OneWay}" />
+                              </TextBlock>
+                            </StackPanel>
+                            <TextBlock Grid.Column="2" FontFamily="Segoe MDL2 Assets" Text="&#xE76C;" FontSize="11" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" Margin="8,0,0,0" />
+                          </Grid>
+                        </Border>
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
+                </StackPanel>
+              </Border>
+
+              <Button Style="{StaticResource CardButton}"
+                      Command="{Binding ShowInternetCommand}"
+                      Visibility="{Binding HasActiveNetwork, Converter={StaticResource BoolToVisibility}}"
+                      AutomationProperties.AutomationId="ExitDnsInternetNavigation">
+                <DockPanel LastChildFill="True">
+                  <TextBlock DockPanel.Dock="Right" FontFamily="Segoe MDL2 Assets" Text="&#xE76C;" FontSize="11" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" Margin="12,0,0,0" />
                   <StackPanel>
-                    <TextBlock Text="Devices" FontSize="18" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding HeroSubtitle}" Style="{StaticResource HelperText}" Margin="0,2,0,0" />
+                    <TextBlock Text="Internet" FontSize="18" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding InternetSourceSummary}" Style="{StaticResource HelperText}" Margin="0,3,0,0" />
                   </StackPanel>
                 </DockPanel>
-                <ListBox x:Name="HomeDeviceList"
-                         ItemsSource="{Binding ActiveNetwork.Participants}"
-                         SelectedValue="{Binding SelectedParticipantKey, Mode=TwoWay}"
-                         SelectedValuePath="SelectionKey"
-                         BorderThickness="0"
-                         Background="Transparent"
-                         Foreground="{DynamicResource TextPrimary}"
-                         HorizontalContentAlignment="Stretch"
-                         ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                         SelectionChanged="HomeDevices_SelectionChanged">
-                  <ListBox.ItemContainerStyle>
-                    <Style TargetType="{x:Type ListBoxItem}">
-                      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                      <Setter Property="Padding" Value="0" />
-                      <Setter Property="Margin" Value="0" />
-                      <Setter Property="Cursor" Value="Hand" />
-                    </Style>
-                  </ListBox.ItemContainerStyle>
-                  <ListBox.ItemTemplate>
-                    <DataTemplate>
-                      <Border Padding="0,10">
-                        <Grid>
-                          <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                          </Grid.ColumnDefinitions>
-                          <Ellipse Width="8" Height="8" VerticalAlignment="Top" Margin="0,6,10,0">
-                            <Ellipse.Style>
-                              <Style TargetType="Ellipse">
-                                <Setter Property="Fill" Value="{DynamicResource StatusDotIdle}" />
-                                <Style.Triggers>
-                                  <DataTrigger Binding="{Binding Reachable}" Value="True">
-                                    <Setter Property="Fill" Value="{DynamicResource StatusDotOk}" />
-                                  </DataTrigger>
-                                </Style.Triggers>
-                              </Style>
-                            </Ellipse.Style>
-                          </Ellipse>
-                          <StackPanel Grid.Column="1">
-                            <WrapPanel>
-                              <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                              <TextBlock Text="This device" Margin="8,0,0,0" Foreground="{DynamicResource Ok}" Visibility="{Binding IsSelf, Converter={StaticResource BoolToVisibility}}" />
-                              <TextBlock Text="Admin" Margin="8,0,0,0" Foreground="{DynamicResource Accent}" Visibility="{Binding IsAdmin, Converter={StaticResource BoolToVisibility}}" />
-                              <TextBlock Text="Exit" Margin="8,0,0,0" Foreground="{DynamicResource Warn}" Visibility="{Binding OffersExitNode, Converter={StaticResource BoolToVisibility}}" />
-                            </WrapPanel>
-                            <TextBlock Style="{StaticResource HelperText}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis">
-                              <Run Text="{Binding CleanTunnelIp, Mode=OneWay}" /><Run Text="  ·  " /><Run Text="{Binding ConnectivityStateText, Mode=OneWay}" />
-                            </TextBlock>
-                          </StackPanel>
-                          <TextBlock Grid.Column="2" FontFamily="Segoe MDL2 Assets" Text="&#xE76C;" FontSize="11" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" Margin="8,0,0,0" />
-                        </Grid>
-                      </Border>
-                    </DataTemplate>
-                  </ListBox.ItemTemplate>
-                </ListBox>
+              </Button>
+            </StackPanel>
+
+            <!-- Device detail stays on Home so the footer network selector and
+                 VPN toggle never disappear; the titlebar chevron returns here. -->
+            <Border Style="{StaticResource Card}" Visibility="{Binding DeviceDetailOpen, Converter={StaticResource BoolToVisibility}}">
+              <StackPanel Visibility="{Binding SelectedParticipant, Converter={StaticResource ObjectToVisibility}}">
+                <StackPanel Orientation="Horizontal">
+                  <Ellipse Width="8" Height="8" Fill="{DynamicResource TextSecondary}" Margin="0,7,7,0" />
+                  <TextBlock Text="{Binding SelectedParticipant.ConnectivityStateText}" Foreground="{DynamicResource TextSecondary}" />
+                </StackPanel>
+                <TextBlock Text="{Binding SelectedParticipant.DisplayName}" FontSize="22" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,2,0,0" />
+                <WrapPanel Margin="0,6,0,0">
+                  <TextBlock Text="This device" Foreground="{DynamicResource Ok}" Margin="0,0,10,0" Visibility="{Binding SelectedParticipant.IsSelf, Converter={StaticResource BoolToVisibility}}" />
+                  <TextBlock Text="Admin" Foreground="{DynamicResource Accent}" Margin="0,0,10,0" Visibility="{Binding SelectedParticipant.IsAdmin, Converter={StaticResource BoolToVisibility}}" />
+                  <TextBlock Text="Exit" Foreground="{DynamicResource Warn}" Margin="0,0,10,0" Visibility="{Binding SelectedParticipant.OffersExitNode, Converter={StaticResource BoolToVisibility}}" />
+                  <TextBlock Text="direct connection" Foreground="{DynamicResource Ok}" Margin="0,0,10,0" Visibility="{Binding SelectedParticipant.IsFipsDirect, Converter={StaticResource BoolToVisibility}}" />
+                  <TextBlock Text="via mesh" Foreground="{DynamicResource TextSecondary}" Margin="0,0,10,0" Visibility="{Binding SelectedParticipant.IsFipsRouted, Converter={StaticResource BoolToVisibility}}" />
+                </WrapPanel>
+
+                <StackPanel Margin="0,16,0,0" Visibility="{Binding SelectedParticipantCanRename, Converter={StaticResource BoolToVisibility}}">
+                  <TextBlock Text="Name" Foreground="{DynamicResource TextSecondary}" Margin="0,0,0,4" />
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="AliasInput" Text="{Binding SelectedParticipant.MagicDnsAlias, Mode=OneWay}" Margin="0,0,8,0" />
+                    <Button Grid.Column="1" Content="Save" Tag="{Binding SelectedParticipant}" Click="SetParticipantAlias_Click" />
+                  </Grid>
+                  <WrapPanel Margin="0,8,0,0" Visibility="{Binding SelectedParticipantCanManage, Converter={StaticResource BoolToVisibility}}">
+                    <Button Content="Admin" Tag="{Binding SelectedParticipant}" Click="ToggleAdmin_Click" Margin="0,0,8,0" />
+                    <Button Content="Remove" Tag="{Binding SelectedParticipant}" Click="RemoveParticipant_Click" />
+                  </WrapPanel>
+                </StackPanel>
+                <StackPanel Margin="0,10,0,0" Visibility="{Binding SelectedParticipantCanManage, Converter={StaticResource BoolToVisibility}}">
+                  <TextBlock Text="Hints" Foreground="{DynamicResource TextSecondary}" Margin="0,0,0,4" />
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="EndpointHintsInput" Text="{Binding SelectedParticipant.FipsEndpointHintsEditText, Mode=OneWay}" ToolTip="host or host:port" Margin="0,0,8,0" />
+                    <Button Grid.Column="1" Content="Save" Tag="{Binding SelectedParticipant}" Click="SetEndpointHints_Click" />
+                  </Grid>
+                </StackPanel>
+
+                <Border BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Margin="0,20,0,0" Padding="0,18,0,0">
+                  <StackPanel>
+                    <TextBlock Text="Addresses" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10" />
+                    <Grid>
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="100" />
+                        <ColumnDefinition Width="*" />
+                      </Grid.ColumnDefinitions>
+                      <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                      </Grid.RowDefinitions>
+                      <TextBlock Text="MagicDNS" Foreground="{DynamicResource TextSecondary}" Margin="0,0,8,8" />
+                      <TextBlock Grid.Column="1" Text="{Binding SelectedParticipant.MagicDnsDisplay}" TextTrimming="CharacterEllipsis" Margin="0,0,0,8" />
+                      <TextBlock Grid.Row="1" Text="VPN IP" Foreground="{DynamicResource TextSecondary}" Margin="0,0,8,8" />
+                      <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedParticipant.CleanTunnelIp}" TextTrimming="CharacterEllipsis" Margin="0,0,0,8" />
+                      <TextBlock Grid.Row="2" Text="Device ID" Foreground="{DynamicResource TextSecondary}" Margin="0,0,8,0" />
+                      <DockPanel Grid.Row="2" Grid.Column="1" LastChildFill="True">
+                        <Button DockPanel.Dock="Right" Content="Copy" Tag="{Binding SelectedParticipant.Npub}" Click="CopyPeer_Click" Margin="8,0,0,0" />
+                        <TextBlock Text="{Binding SelectedParticipant.Npub}" TextWrapping="Wrap" />
+                      </DockPanel>
+                    </Grid>
+                  </StackPanel>
+                </Border>
+
+                <Border BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Margin="0,20,0,0" Padding="0,18,0,0">
+                  <StackPanel>
+                    <TextBlock Text="Connectivity" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10" />
+                    <UniformGrid Columns="2">
+                      <StackPanel Margin="0,0,12,12">
+                        <TextBlock Text="Role" Foreground="{DynamicResource TextSecondary}" FontSize="12" />
+                        <TextBlock Text="{Binding SelectedParticipant.RoleText}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                      </StackPanel>
+                      <StackPanel Margin="0,0,12,12">
+                        <TextBlock Text="State" Foreground="{DynamicResource TextSecondary}" FontSize="12" />
+                        <TextBlock Text="{Binding SelectedParticipant.ConnectivityStateText}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                      </StackPanel>
+                      <StackPanel Margin="0,0,12,12">
+                        <TextBlock Text="FIPS path" Foreground="{DynamicResource TextSecondary}" FontSize="12" />
+                        <TextBlock Text="{Binding SelectedParticipant.FipsPathText}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                      </StackPanel>
+                      <StackPanel Margin="0,0,12,0">
+                        <TextBlock Text="Last seen" Foreground="{DynamicResource TextSecondary}" FontSize="12" />
+                        <TextBlock Text="{Binding SelectedParticipant.LastSeenDisplay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                      </StackPanel>
+                      <StackPanel Margin="0,0,12,0">
+                        <TextBlock Text="Latency age" Foreground="{DynamicResource TextSecondary}" FontSize="12" />
+                        <TextBlock Text="{Binding SelectedParticipant.FipsSrttAgeDisplay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                      </StackPanel>
+                      <StackPanel Margin="0,0,12,0">
+                        <TextBlock Text="Control seen" Foreground="{DynamicResource TextSecondary}" FontSize="12" />
+                        <TextBlock Text="{Binding SelectedParticipant.LastFipsControlSeenDisplay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                      </StackPanel>
+                      <StackPanel Margin="0,0,12,0">
+                        <TextBlock Text="Data seen" Foreground="{DynamicResource TextSecondary}" FontSize="12" />
+                        <TextBlock Text="{Binding SelectedParticipant.LastFipsDataSeenDisplay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                      </StackPanel>
+                      <StackPanel Margin="0,0,12,0">
+                        <TextBlock Text="Sent" Foreground="{DynamicResource TextSecondary}" FontSize="12" />
+                        <TextBlock Text="{Binding SelectedParticipant.TxBytesDisplay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                      </StackPanel>
+                      <StackPanel Margin="0,0,12,0">
+                        <TextBlock Text="Received" Foreground="{DynamicResource TextSecondary}" FontSize="12" />
+                        <TextBlock Text="{Binding SelectedParticipant.RxBytesDisplay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                      </StackPanel>
+                    </UniformGrid>
+                    <StackPanel Margin="0,0,12,0">
+                      <TextBlock Text="Address hints" Foreground="{DynamicResource TextSecondary}" FontSize="12" />
+                      <TextBlock Text="{Binding SelectedParticipant.FipsEndpointHintsText}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding SelectedParticipant.StatusDetailText}" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,8,0,0" />
+                  </StackPanel>
+                </Border>
               </StackPanel>
             </Border>
-
-            <Button Style="{StaticResource CardButton}"
-                    Command="{Binding ShowInternetCommand}"
-                    Visibility="{Binding HasActiveNetwork, Converter={StaticResource BoolToVisibility}}"
-                    AutomationProperties.AutomationId="ExitDnsInternetNavigation">
-              <DockPanel LastChildFill="True">
-                <TextBlock DockPanel.Dock="Right" FontFamily="Segoe MDL2 Assets" Text="&#xE76C;" FontSize="11" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" Margin="12,0,0,0" />
-                <StackPanel>
-                  <TextBlock Text="Internet" FontSize="18" FontWeight="SemiBold" />
-                  <TextBlock Text="{Binding InternetSourceSummary}" Style="{StaticResource HelperText}" Margin="0,3,0,0" />
-                </StackPanel>
-              </DockPanel>
-            </Button>
           </StackPanel>
 
           <!-- ==================== Account ==================== -->
@@ -275,245 +403,6 @@
                 <Button Content="Open wallet" Command="{Binding ShowWalletCommand}" HorizontalAlignment="Left" Margin="0,10,0,0" />
               </StackPanel>
             </Border>
-          </StackPanel>
-
-          <!-- ==================== Devices ==================== -->
-          <StackPanel Visibility="{Binding Page, Converter={StaticResource PageVisibility}, ConverterParameter=Devices}">
-
-            <StackPanel Visibility="{Binding HasActiveNetwork, Converter={StaticResource InverseBoolToVisibility}}">
-              <Border Style="{StaticResource Card}" Visibility="{Binding ShowNetworkSetupChoices, Converter={StaticResource BoolToVisibility}}">
-                <StackPanel>
-                  <Button Content="Create Network" Command="{Binding ShowCreateNetworkSetupCommand}" Margin="0,0,0,8" AutomationProperties.AutomationId="ManualJoinCreateNetworkChoice" />
-                  <Button Content="Join Network" Command="{Binding ShowJoinNetworkSetupCommand}" AutomationProperties.AutomationId="ManualJoinChooseJoin" />
-                </StackPanel>
-              </Border>
-              <Border Style="{StaticResource Card}" Visibility="{Binding ShowNetworkSetupCreate, Converter={StaticResource BoolToVisibility}}">
-                <StackPanel>
-                  <Button Content="Back" Command="{Binding BackToNetworkSetupChoicesCommand}" HorizontalAlignment="Left" Margin="0,0,0,10" />
-                  <TextBlock Text="Create Network" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10" />
-                  <Grid>
-                    <Grid.ColumnDefinitions>
-                      <ColumnDefinition Width="*" />
-                      <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <TextBox Text="{Binding NetworkNameInput, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,8,0" AutomationProperties.AutomationId="ManualJoinCreateNetworkName" />
-                    <Button Grid.Column="1" Content="Create" Command="{Binding CreateNetworkCommand}" AutomationProperties.AutomationId="ManualJoinCreateNetworkSubmit" />
-                  </Grid>
-                </StackPanel>
-              </Border>
-              <Border Style="{StaticResource Card}" Visibility="{Binding ShowNetworkSetupJoin, Converter={StaticResource BoolToVisibility}}">
-                <StackPanel>
-                  <Button Content="Back" Command="{Binding BackToNetworkSetupChoicesCommand}" HorizontalAlignment="Left" Margin="0,0,0,10" />
-                  <TextBlock Text="Join Network" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10" />
-                  <Viewbox Stretch="Uniform" StretchDirection="DownOnly" MaxWidth="220" MaxHeight="220" HorizontalAlignment="Center" Visibility="{Binding ShowJoinRequestQr, Converter={StaticResource BoolToVisibility}}">
-                    <controls:QrCodeView Width="220" Height="220" Matrix="{Binding JoinRequestQr}" />
-                  </Viewbox>
-                  <Button Content="Copy Request" Command="{Binding CopyPeerCommand}" CommandParameter="{Binding JoinRequestQrCodeOrLink}" HorizontalAlignment="Center" Margin="0,8,0,10" Visibility="{Binding ShowJoinRequestQr, Converter={StaticResource BoolToVisibility}}" />
-                  <Expander Header="Manual join" Margin="0,8,0,0" AutomationProperties.AutomationId="ManualJoinExpander">
-                    <StackPanel Margin="0,8,0,0">
-                      <TextBlock Text="Give the admin your Device ID. Enter their Device ID and Network ID here; they must add your Device ID too." Style="{StaticResource HelperText}" Margin="0,0,0,8" />
-                      <TextBlock Text="{Binding State.OwnNpub}" TextWrapping="Wrap" Margin="0,0,0,6" AutomationProperties.AutomationId="ManualJoinJoinerDeviceIdValue" />
-                      <Button Content="Copy my Device ID" Command="{Binding CopyPeerCommand}" CommandParameter="{Binding State.OwnNpub}" HorizontalAlignment="Left" Margin="0,0,0,8" />
-                      <TextBox Text="{Binding ManualJoinAdminId, UpdateSourceTrigger=PropertyChanged}" ToolTip="Admin Device ID" Margin="0,0,0,6" AutomationProperties.AutomationId="ManualJoinAdminId" />
-                      <TextBlock Text="Not a valid device ID" Foreground="{DynamicResource Danger}" FontSize="11" Visibility="{Binding ManualJoinAdminErrorVisibility}" />
-                      <TextBox Text="{Binding ManualJoinMeshId, UpdateSourceTrigger=PropertyChanged}" ToolTip="Network ID" Margin="0,6,0,8" AutomationProperties.AutomationId="ManualJoinNetworkId" />
-                      <Button Content="Add manually" Command="{Binding ManualAddNetworkCommand}" HorizontalAlignment="Left" AutomationProperties.AutomationId="ManualJoinSubmit" />
-                    </StackPanel>
-                  </Expander>
-                </StackPanel>
-              </Border>
-            </StackPanel>
-
-            <StackPanel Visibility="{Binding HasActiveNetwork, Converter={StaticResource BoolToVisibility}}">
-              <Border Style="{StaticResource Card}" Visibility="{Binding DeviceDetailOpen, Converter={StaticResource InverseBoolToVisibility}}">
-                <StackPanel>
-                  <DockPanel LastChildFill="True">
-                    <Button DockPanel.Dock="Right" Command="{Binding ShowAddDeviceCommand}" Content="+ Add device" Visibility="{Binding ActiveNetwork.LocalIsAdmin, Converter={StaticResource BoolToVisibility}}" AutomationProperties.AutomationId="ManualJoinAdminOpen" />
-                    <StackPanel>
-                      <TextBlock Text="Devices" FontSize="18" FontWeight="SemiBold" />
-                      <TextBlock Text="{Binding HeroSubtitle}" Style="{StaticResource HelperText}" Margin="0,3,0,0" />
-                    </StackPanel>
-                  </DockPanel>
-
-                  <ListBox ItemsSource="{Binding ActiveNetwork.Participants}"
-                           SelectedValue="{Binding SelectedParticipantKey, Mode=TwoWay}"
-                           SelectedValuePath="SelectionKey"
-                           BorderThickness="0"
-                           Background="Transparent"
-                           Foreground="{DynamicResource TextPrimary}"
-                           Margin="0,14,0,0"
-                           HorizontalContentAlignment="Stretch">
-                    <ListBox.ItemContainerStyle>
-                      <Style TargetType="{x:Type ListBoxItem}">
-                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                        <Setter Property="Padding" Value="0" />
-                        <Setter Property="Margin" Value="0" />
-                      </Style>
-                    </ListBox.ItemContainerStyle>
-                    <ListBox.ItemTemplate>
-                      <DataTemplate>
-                        <Border AutomationProperties.AutomationId="{Binding AcceptedRosterAutomationId}">
-                          <Border.Style>
-                            <Style TargetType="{x:Type Border}" BasedOn="{StaticResource Card}">
-                              <Setter Property="Padding" Value="12" />
-                              <Setter Property="Margin" Value="0,0,0,8" />
-                              <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType={x:Type ListBoxItem}}}" Value="True">
-                                  <Setter Property="Background" Value="{DynamicResource AccentSoft}" />
-                                  <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
-                                </DataTrigger>
-                              </Style.Triggers>
-                            </Style>
-                          </Border.Style>
-                          <Grid>
-                            <Grid.ColumnDefinitions>
-                              <ColumnDefinition Width="16" />
-                              <ColumnDefinition Width="*" />
-                              <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <Ellipse Width="8" Height="8" Fill="{DynamicResource TextSecondary}" VerticalAlignment="Top" Margin="0,6,0,0" />
-                            <StackPanel Grid.Column="1">
-                              <WrapPanel>
-                                <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                <TextBlock Text="This device" Margin="8,0,0,0" Foreground="{DynamicResource Ok}" Visibility="{Binding IsSelf, Converter={StaticResource BoolToVisibility}}" />
-                                <TextBlock Text="Admin" Margin="8,0,0,0" Foreground="{DynamicResource Accent}" Visibility="{Binding IsAdmin, Converter={StaticResource BoolToVisibility}}" />
-                                <TextBlock Text="Exit" Margin="8,0,0,0" Foreground="{DynamicResource Warn}" Visibility="{Binding OffersExitNode, Converter={StaticResource BoolToVisibility}}" />
-                                <TextBlock Text="via mesh" Margin="8,0,0,0" Foreground="{DynamicResource TextSecondary}" Visibility="{Binding IsFipsRouted, Converter={StaticResource BoolToVisibility}}" />
-                              </WrapPanel>
-                              <TextBlock Style="{StaticResource HelperText}" Margin="0,4,0,0">
-                                <Run Text="{Binding CleanTunnelIp, Mode=OneWay}" /><Run Text="  " /><Run Text="{Binding ConnectivityStateText, Mode=OneWay}" />
-                              </TextBlock>
-                            </StackPanel>
-                            <TextBlock Grid.Column="2" FontFamily="Segoe MDL2 Assets" Text="&#xE76C;" FontSize="11" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" Margin="8,0,0,0" />
-                          </Grid>
-                        </Border>
-                      </DataTemplate>
-                    </ListBox.ItemTemplate>
-                  </ListBox>
-                </StackPanel>
-              </Border>
-
-              <Border Style="{StaticResource Card}" Visibility="{Binding DeviceDetailOpen, Converter={StaticResource BoolToVisibility}}">
-                <StackPanel>
-                  <StackPanel Visibility="{Binding SelectedParticipant, Converter={StaticResource ObjectToVisibility}}">
-                    <StackPanel Orientation="Horizontal">
-                      <Ellipse Width="8" Height="8" Fill="{DynamicResource TextSecondary}" Margin="0,7,7,0" />
-                      <TextBlock Text="{Binding SelectedParticipant.ConnectivityStateText}" Foreground="{DynamicResource TextSecondary}" />
-                    </StackPanel>
-                    <TextBlock Text="{Binding SelectedParticipant.DisplayName}" FontSize="22" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,2,0,0" />
-                    <WrapPanel Margin="0,6,0,0">
-                      <TextBlock Text="This device" Foreground="{DynamicResource Ok}" Margin="0,0,10,0" Visibility="{Binding SelectedParticipant.IsSelf, Converter={StaticResource BoolToVisibility}}" />
-                      <TextBlock Text="Admin" Foreground="{DynamicResource Accent}" Margin="0,0,10,0" Visibility="{Binding SelectedParticipant.IsAdmin, Converter={StaticResource BoolToVisibility}}" />
-                      <TextBlock Text="Exit" Foreground="{DynamicResource Warn}" Margin="0,0,10,0" Visibility="{Binding SelectedParticipant.OffersExitNode, Converter={StaticResource BoolToVisibility}}" />
-                      <TextBlock Text="direct connection" Foreground="{DynamicResource Ok}" Margin="0,0,10,0" Visibility="{Binding SelectedParticipant.IsFipsDirect, Converter={StaticResource BoolToVisibility}}" />
-                      <TextBlock Text="via mesh" Foreground="{DynamicResource TextSecondary}" Margin="0,0,10,0" Visibility="{Binding SelectedParticipant.IsFipsRouted, Converter={StaticResource BoolToVisibility}}" />
-                    </WrapPanel>
-
-                    <StackPanel Margin="0,16,0,0" Visibility="{Binding SelectedParticipantCanRename, Converter={StaticResource BoolToVisibility}}">
-                      <TextBlock Text="Name" Foreground="{DynamicResource TextSecondary}" Margin="0,0,0,4" />
-                      <Grid>
-                        <Grid.ColumnDefinitions>
-                          <ColumnDefinition Width="*" />
-                          <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBox x:Name="AliasInput" Text="{Binding SelectedParticipant.MagicDnsAlias, Mode=OneWay}" Margin="0,0,8,0" />
-                        <Button Grid.Column="1" Content="Save" Tag="{Binding SelectedParticipant}" Click="SetParticipantAlias_Click" />
-                      </Grid>
-                      <WrapPanel Margin="0,8,0,0" Visibility="{Binding SelectedParticipantCanManage, Converter={StaticResource BoolToVisibility}}">
-                        <Button Content="Admin" Tag="{Binding SelectedParticipant}" Click="ToggleAdmin_Click" Margin="0,0,8,0" />
-                        <Button Content="Remove" Tag="{Binding SelectedParticipant}" Click="RemoveParticipant_Click" />
-                      </WrapPanel>
-                    </StackPanel>
-                    <StackPanel Margin="0,10,0,0" Visibility="{Binding SelectedParticipantCanManage, Converter={StaticResource BoolToVisibility}}">
-                      <TextBlock Text="Hints" Foreground="{DynamicResource TextSecondary}" Margin="0,0,0,4" />
-                      <Grid>
-                        <Grid.ColumnDefinitions>
-                          <ColumnDefinition Width="*" />
-                          <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBox x:Name="EndpointHintsInput" Text="{Binding SelectedParticipant.FipsEndpointHintsEditText, Mode=OneWay}" ToolTip="host or host:port" Margin="0,0,8,0" />
-                        <Button Grid.Column="1" Content="Save" Tag="{Binding SelectedParticipant}" Click="SetEndpointHints_Click" />
-                      </Grid>
-                    </StackPanel>
-
-                    <Border BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Margin="0,20,0,0" Padding="0,18,0,0">
-                      <StackPanel>
-                        <TextBlock Text="Addresses" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10" />
-                        <Grid>
-                          <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="100" />
-                            <ColumnDefinition Width="*" />
-                          </Grid.ColumnDefinitions>
-                          <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                          </Grid.RowDefinitions>
-                          <TextBlock Text="MagicDNS" Foreground="{DynamicResource TextSecondary}" Margin="0,0,8,8" />
-                          <TextBlock Grid.Column="1" Text="{Binding SelectedParticipant.MagicDnsDisplay}" TextTrimming="CharacterEllipsis" Margin="0,0,0,8" />
-                          <TextBlock Grid.Row="1" Text="VPN IP" Foreground="{DynamicResource TextSecondary}" Margin="0,0,8,8" />
-                          <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedParticipant.CleanTunnelIp}" TextTrimming="CharacterEllipsis" Margin="0,0,0,8" />
-                          <TextBlock Grid.Row="2" Text="Device ID" Foreground="{DynamicResource TextSecondary}" Margin="0,0,8,0" />
-                          <DockPanel Grid.Row="2" Grid.Column="1" LastChildFill="True">
-                            <Button DockPanel.Dock="Right" Content="Copy" Tag="{Binding SelectedParticipant.Npub}" Click="CopyPeer_Click" Margin="8,0,0,0" />
-                            <TextBlock Text="{Binding SelectedParticipant.Npub}" TextWrapping="Wrap" />
-                          </DockPanel>
-                        </Grid>
-                      </StackPanel>
-                    </Border>
-
-                    <Border BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Margin="0,20,0,0" Padding="0,18,0,0">
-                      <StackPanel>
-                        <TextBlock Text="Connectivity" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10" />
-                        <UniformGrid Columns="2">
-                          <StackPanel Margin="0,0,12,12">
-                            <TextBlock Text="Role" Foreground="{DynamicResource TextSecondary}" FontSize="12" />
-                            <TextBlock Text="{Binding SelectedParticipant.RoleText}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                          </StackPanel>
-                          <StackPanel Margin="0,0,12,12">
-                            <TextBlock Text="State" Foreground="{DynamicResource TextSecondary}" FontSize="12" />
-                            <TextBlock Text="{Binding SelectedParticipant.ConnectivityStateText}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                          </StackPanel>
-                          <StackPanel Margin="0,0,12,12">
-                            <TextBlock Text="FIPS path" Foreground="{DynamicResource TextSecondary}" FontSize="12" />
-                            <TextBlock Text="{Binding SelectedParticipant.FipsPathText}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                          </StackPanel>
-                          <StackPanel Margin="0,0,12,0">
-                            <TextBlock Text="Last seen" Foreground="{DynamicResource TextSecondary}" FontSize="12" />
-                            <TextBlock Text="{Binding SelectedParticipant.LastSeenDisplay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                          </StackPanel>
-                          <StackPanel Margin="0,0,12,0">
-                            <TextBlock Text="Latency age" Foreground="{DynamicResource TextSecondary}" FontSize="12" />
-                            <TextBlock Text="{Binding SelectedParticipant.FipsSrttAgeDisplay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                          </StackPanel>
-                          <StackPanel Margin="0,0,12,0">
-                            <TextBlock Text="Control seen" Foreground="{DynamicResource TextSecondary}" FontSize="12" />
-                            <TextBlock Text="{Binding SelectedParticipant.LastFipsControlSeenDisplay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                          </StackPanel>
-                          <StackPanel Margin="0,0,12,0">
-                            <TextBlock Text="Data seen" Foreground="{DynamicResource TextSecondary}" FontSize="12" />
-                            <TextBlock Text="{Binding SelectedParticipant.LastFipsDataSeenDisplay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                          </StackPanel>
-                          <StackPanel Margin="0,0,12,0">
-                            <TextBlock Text="Sent" Foreground="{DynamicResource TextSecondary}" FontSize="12" />
-                            <TextBlock Text="{Binding SelectedParticipant.TxBytesDisplay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                          </StackPanel>
-                          <StackPanel Margin="0,0,12,0">
-                            <TextBlock Text="Received" Foreground="{DynamicResource TextSecondary}" FontSize="12" />
-                            <TextBlock Text="{Binding SelectedParticipant.RxBytesDisplay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                          </StackPanel>
-                        </UniformGrid>
-                        <StackPanel Margin="0,0,12,0">
-                          <TextBlock Text="Address hints" Foreground="{DynamicResource TextSecondary}" FontSize="12" />
-                          <TextBlock Text="{Binding SelectedParticipant.FipsEndpointHintsText}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
-                        <TextBlock Text="{Binding SelectedParticipant.StatusDetailText}" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,8,0,0" />
-                      </StackPanel>
-                    </Border>
-                  </StackPanel>
-                </StackPanel>
-              </Border>
-            </StackPanel>
           </StackPanel>
 
           <!-- ==================== Add Network ==================== -->

@@ -183,6 +183,10 @@ public sealed partial class AppViewModel
             _shownNetworkId = "";
         }
         OnPropertyChanged(nameof(ActiveNetwork));
+        if (ActiveNetwork is null && _deviceDetailOpen)
+        {
+            DeviceDetailOpen = false;
+        }
         OnPropertyChanged(nameof(ExitNodeParticipants));
         OnPropertyChanged(nameof(HasActiveNetwork));
         OnPropertyChanged(nameof(HasEnabledNetwork));
