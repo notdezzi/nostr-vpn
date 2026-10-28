@@ -157,10 +157,10 @@
         <Setter Property="TextWrapping" Value="Wrap" />
       </Style>
 
-      <!-- Minimal scrollbars: 8px rounded thumb, no track buttons, no track fill. -->
+      <!-- Minimal scrollbars: 3px rounded thumb, no track buttons, no track fill. -->
       <Style TargetType="{x:Type ScrollBar}">
         <Setter Property="Background" Value="Transparent" />
-        <Setter Property="Width" Value="8" />
+        <Setter Property="Width" Value="3" />
         <Setter Property="Template">
           <Setter.Value>
             <ControlTemplate TargetType="{x:Type ScrollBar}">
@@ -176,7 +176,7 @@
                     <Thumb>
                       <Thumb.Template>
                         <ControlTemplate TargetType="{x:Type Thumb}">
-                          <Border x:Name="ThumbSurface" Background="{DynamicResource ScrollThumb}" CornerRadius="4" />
+                          <Border x:Name="ThumbSurface" Background="{DynamicResource ScrollThumb}" CornerRadius="1.5" />
                           <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                               <Setter TargetName="ThumbSurface" Property="Background" Value="{DynamicResource ScrollThumbHover}" />
@@ -197,7 +197,7 @@
         <Style.Triggers>
           <Trigger Property="Orientation" Value="Horizontal">
             <Setter Property="Width" Value="Auto" />
-            <Setter Property="Height" Value="8" />
+            <Setter Property="Height" Value="3" />
             <Setter Property="Template">
               <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ScrollBar}">
@@ -213,7 +213,7 @@
                         <Thumb>
                           <Thumb.Template>
                             <ControlTemplate TargetType="{x:Type Thumb}">
-                              <Border x:Name="ThumbSurface" Background="{DynamicResource ScrollThumb}" CornerRadius="4" />
+                              <Border x:Name="ThumbSurface" Background="{DynamicResource ScrollThumb}" CornerRadius="1.5" />
                               <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
                                   <Setter TargetName="ThumbSurface" Property="Background" Value="{DynamicResource ScrollThumbHover}" />

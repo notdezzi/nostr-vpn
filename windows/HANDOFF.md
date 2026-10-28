@@ -58,7 +58,7 @@ from each edge** — the same placement Mullvad uses on Windows 11 (their
 `Left/Top` from `SystemParameters.WorkArea`; after that, the window keeps
 whatever position the user drags it to (also across close-to-tray re-shows).
 
-Scrollbars are **custom minimal**: 8px rounded thumb (`ScrollThumb` /
+Scrollbars are **custom minimal**: a 3px rounded thumb (`ScrollThumb` /
 `ScrollThumbHover` theme brushes), no track buttons or track fill, applied
 globally via a `ScrollBar` style in `App.xaml` (vertical and horizontal).
 
