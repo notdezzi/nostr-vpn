@@ -23,6 +23,6 @@
   <SolidColorBrush x:Key="SwitchTrackOff" Color="#D8E0E7" />
   <SolidColorBrush x:Key="SwitchTrackBorder" Color="#C0CCD6" />
   <SolidColorBrush x:Key="SwitchThumb" Color="#FFFFFF" />
-  <SolidColorBrush x:Key="ScrollThumb" Color="#C4CCD2" />
-  <SolidColorBrush x:Key="ScrollThumbHover" Color="#98A4AE" />
+  <SolidColorBrush x:Key="ScrollThumb" Color="#B0BAC4" />
+  <SolidColorBrush x:Key="ScrollThumbHover" Color="#8A97A3" />
 </ResourceDictionary>

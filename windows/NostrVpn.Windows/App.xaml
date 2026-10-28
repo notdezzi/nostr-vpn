@@ -163,15 +163,17 @@
         <Setter Property="TextWrapping" Value="Wrap" />
       </Style>
 
-      <!-- Minimal scrollbars: 3px rounded thumb, no track buttons, no track fill.
+      <!-- Minimal scrollbars: an 8px lane with a 4px rounded thumb and a 3px
+           gutter from the window edge; no track buttons or track fill.
            MinWidth/MinHeight must be pinned to 0: the theme's default ScrollBar
            style stays active underneath any implicit style and clamps the bar
            to the system scrollbar width otherwise. -->
       <Style TargetType="{x:Type ScrollBar}">
         <Setter Property="Background" Value="Transparent" />
-        <Setter Property="Width" Value="3" />
+        <Setter Property="Width" Value="8" />
         <Setter Property="MinWidth" Value="0" />
         <Setter Property="MinHeight" Value="0" />
+        <Setter Property="Margin" Value="0,2,3,2" />
         <Setter Property="Template">
           <Setter.Value>
             <ControlTemplate TargetType="{x:Type ScrollBar}">
@@ -187,7 +189,9 @@
                     <Thumb>
                       <Thumb.Template>
                         <ControlTemplate TargetType="{x:Type Thumb}">
-                          <Border x:Name="ThumbSurface" Background="{DynamicResource ScrollThumb}" CornerRadius="1.5" />
+                          <Grid Background="Transparent">
+                            <Border x:Name="ThumbSurface" Width="4" HorizontalAlignment="Center" CornerRadius="2" Background="{DynamicResource ScrollThumb}" />
+                          </Grid>
                           <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                               <Setter TargetName="ThumbSurface" Property="Background" Value="{DynamicResource ScrollThumbHover}" />
@@ -208,9 +212,10 @@
         <Style.Triggers>
           <Trigger Property="Orientation" Value="Horizontal">
             <Setter Property="Width" Value="Auto" />
-            <Setter Property="Height" Value="3" />
+            <Setter Property="Height" Value="8" />
             <Setter Property="MinWidth" Value="0" />
             <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Margin" Value="2,0,2,3" />
             <Setter Property="Template">
               <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ScrollBar}">
@@ -226,7 +231,9 @@
                         <Thumb>
                           <Thumb.Template>
                             <ControlTemplate TargetType="{x:Type Thumb}">
-                              <Border x:Name="ThumbSurface" Background="{DynamicResource ScrollThumb}" CornerRadius="1.5" />
+                              <Grid Background="Transparent">
+                                <Border x:Name="ThumbSurface" Height="4" VerticalAlignment="Center" CornerRadius="2" Background="{DynamicResource ScrollThumb}" />
+                              </Grid>
                               <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
                                   <Setter TargetName="ThumbSurface" Property="Background" Value="{DynamicResource ScrollThumbHover}" />
