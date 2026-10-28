@@ -269,36 +269,6 @@
         </Setter>
       </Style>
 
-      <!-- Rounded hover pill for list rows (e.g. the Home device list):
-           the default ListBoxItem chrome is a sharp-cornered system
-           highlight that sits flush against the row text. -->
-      <Style TargetType="{x:Type ListBoxItem}">
-        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
-        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-        <Setter Property="Padding" Value="10,4" />
-        <Setter Property="Margin" Value="0,1" />
-        <Setter Property="Template">
-          <Setter.Value>
-            <ControlTemplate TargetType="{x:Type ListBoxItem}">
-              <Border x:Name="Surface" CornerRadius="6" Background="Transparent" BorderThickness="1" BorderBrush="Transparent" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
-                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
-              </Border>
-              <ControlTemplate.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                  <Setter TargetName="Surface" Property="Background" Value="{DynamicResource HoverBg}" />
-                </Trigger>
-                <Trigger Property="IsSelected" Value="True">
-                  <Setter TargetName="Surface" Property="Background" Value="{DynamicResource AccentSoft}" />
-                </Trigger>
-                <Trigger Property="IsKeyboardFocused" Value="True">
-                  <Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource Accent}" />
-                </Trigger>
-              </ControlTemplate.Triggers>
-            </ControlTemplate>
-          </Setter.Value>
-        </Setter>
-      </Style>
-
       <!-- Themed dropdown: rounded field, themed arrow, themed popup panel
            (the default ComboBox chrome is light system style in both themes). -->
       <Style TargetType="{x:Type ComboBox}">

@@ -159,26 +159,27 @@
                     <Button DockPanel.Dock="Right" Command="{Binding ShowAddDeviceCommand}" Content="+ Add device" Visibility="{Binding ActiveNetwork.LocalIsAdmin, Converter={StaticResource BoolToVisibility}}" AutomationProperties.AutomationId="ManualJoinAdminOpen" />
                     <TextBlock Text="Devices" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" />
                   </DockPanel>
-                  <ListBox x:Name="HomeDeviceList"
-                           ItemsSource="{Binding ActiveNetwork.Participants}"
-                           SelectedValue="{Binding SelectedParticipantKey, Mode=TwoWay}"
-                           SelectedValuePath="SelectionKey"
-                           BorderThickness="0"
-                           Background="Transparent"
-                           Foreground="{DynamicResource TextPrimary}"
-                           HorizontalContentAlignment="Stretch"
-                           ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                           PreviewMouseLeftButtonDown="HomeDeviceList_PreviewMouseLeftButtonDown">
-                  <ListBox.ItemContainerStyle>
-                    <!-- Inherits the app-wide rounded hover pill; rows are
-                         click affordances, hence the hand cursor. -->
-                    <Style TargetType="{x:Type ListBoxItem}" BasedOn="{StaticResource {x:Type ListBoxItem}}">
-                      <Setter Property="Cursor" Value="Hand" />
-                    </Style>
-                  </ListBox.ItemContainerStyle>
-                    <ListBox.ItemTemplate>
+                  <ItemsControl ItemsSource="{Binding ActiveNetwork.Participants}"
+                                PreviewMouseLeftButtonDown="HomeDeviceRow_PreviewMouseLeftButtonDown">
+                    <ItemsControl.ItemTemplate>
                       <DataTemplate>
-                        <Border Padding="0,7" AutomationProperties.AutomationId="{Binding AcceptedRosterAutomationId}">
+                        <!-- Rows carry their own rounded hover pill: a ListBox
+                             would swallow the mouse wheel with its internal
+                             ScrollViewer and need container chrome for hover. -->
+                        <Border AutomationProperties.AutomationId="{Binding AcceptedRosterAutomationId}" Cursor="Hand">
+                          <Border.Style>
+                            <Style TargetType="{x:Type Border}">
+                              <Setter Property="Background" Value="Transparent" />
+                              <Setter Property="CornerRadius" Value="6" />
+                              <Setter Property="Padding" Value="10,7" />
+                              <Setter Property="Margin" Value="0,1" />
+                              <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                  <Setter Property="Background" Value="{DynamicResource HoverBg}" />
+                                </Trigger>
+                              </Style.Triggers>
+                            </Style>
+                          </Border.Style>
                           <Grid>
                             <Grid.ColumnDefinitions>
                               <ColumnDefinition Width="Auto" />
@@ -209,11 +210,11 @@
                               </TextBlock>
                             </StackPanel>
                             <TextBlock Grid.Column="2" FontFamily="Segoe MDL2 Assets" Text="&#xE76C;" FontSize="11" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" Margin="8,0,0,0" />
-                          </Grid>
+                        </Grid>
                         </Border>
                       </DataTemplate>
-                    </ListBox.ItemTemplate>
-                  </ListBox>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
                 </StackPanel>
               </Border>
 

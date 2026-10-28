@@ -13,6 +13,9 @@ navigation changed. Build verified with `scripts/windows-build.ps1
   (source folder `dist/portable-win-x64/`). Unzip anywhere, run
   `NostrVpn.Windows.exe`. The bundle contains the GUI, the native app core
   (`nostr_vpn_app_core.dll`), the daemon (`nvpn.exe`), and `binaries/wintun.dll`.
+  **Keep `dist/portable-win-x64/` in sync with the publish output after every
+  rebuild** (`robocopy <publish> dist/portable-win-x64 /MIR`) — launching a
+  stale copy there looks exactly like the latest fixes not working.
 - Rebuild from source: `powershell -File scripts/windows-build.ps1 -Configuration Release -Run`
   (adds `-Publish` for the publish output, `-Installer` for the Inno Setup installer).
 
@@ -66,11 +69,14 @@ globally via a `ScrollBar` style in `App.xaml` (vertical and horizontal).
 **Themed chrome (polish pass):** every remaining system-drawn control got an
 implicit style in `App.xaml` so nothing renders with light Windows chrome in
 the dark theme:
-- **List rows** (`ListBoxItem`) draw a rounded hover pill (`HoverBg`, 6px
-  corners, 10px horizontal padding) instead of the default sharp-cornered
-  highlight that sat flush against the row text; selected rows get
-  `AccentSoft`, and keyboard focus gets an accent outline. The Home device
-  rows inherit this via `BasedOn="{StaticResource {x:Type ListBoxItem}}"`.
+- **List rows** are a plain `ItemsControl` whose row `Border` draws its own
+  rounded hover pill (`HoverBg`, 6px corners, 10px horizontal padding) — the
+  default `ListBoxItem` chrome was a sharp-cornered system highlight sitting
+  flush against the row text. A `ListBox` was deliberately avoided here: its
+  internal `ScrollViewer` swallows mouse-wheel events even when its own
+  scrolling is disabled, so the page stopped scrolling while the cursor was
+  over the device list. With no selection, a row click sets
+  `SelectedParticipantKey` directly from the row's data context.
 - **Menus** — the footer network switcher's `ContextMenu` renders as a rounded
   `PanelBg` panel with pill-highlighted `MenuItem`s, a ✓ for checked items,
   themed `Separator`s, and themed submenus; the old per-menu brush overrides

@@ -76,9 +76,6 @@ public partial class MainWindow : Window
         if (ViewModel.DeviceDetailOpen)
         {
             ViewModel.DeviceDetailOpen = false;
-            // Selection is momentary navigation, not a state to display: drop
-            // the row highlight so returning to the list shows no stale pill.
-            HomeDeviceList.SelectedIndex = -1;
             return;
         }
         ViewModel.Page = AppPage.Home;
@@ -164,17 +161,19 @@ public partial class MainWindow : Window
     }
 
     // Clicking a device drills into its detail while staying on Home, so the
-    // footer network selector and VPN toggle remain visible. Preview is used
-    // because clicking the already-selected row raises no SelectionChanged.
-    private void HomeDeviceList_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    // footer network selector and VPN toggle remain visible. The row sets the
+    // selected participant directly because a plain ItemsControl has no
+    // selection (choosing it over ListBox keeps mouse-wheel scrolling working:
+    // a ListBox's internal ScrollViewer swallows the wheel even when disabled).
+    private void HomeDeviceRow_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (ViewModel.Page != AppPage.Home)
         {
             return;
         }
-        if (sender is ItemsControl items
-            && ItemsControl.ContainerFromElement(items, e.OriginalSource as DependencyObject) is not null)
+        if ((e.OriginalSource as FrameworkElement)?.DataContext is NativeParticipantState participant)
         {
+            ViewModel.SelectedParticipantKey = participant.SelectionKey;
             ViewModel.DeviceDetailOpen = true;
         }
     }
